@@ -1,0 +1,2 @@
+Scaffold-DbContext "Data Source=.;Initial Catalog=VideoGuide;Integrated Security=True; Encrypt=False;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -UseDatabaseNames -Force
+Update-database
