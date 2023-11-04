@@ -11,7 +11,9 @@ public partial class Group
 
     public string? Local_GroupName { get; set; }
 
-    public string? Group_Location { get; set; }
+    public string? Group_Photo_Location { get; set; }
+
+    public bool? visable { get; set; }
 
     public virtual ICollection<GroupTag> GroupTags { get; set; } = new List<GroupTag>();
 
