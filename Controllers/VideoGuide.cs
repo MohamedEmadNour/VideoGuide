@@ -25,7 +25,7 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles ="User,Admin")]
         public async Task<IActionResult> Get_Groups()
         {
-            var groupData = await _context.Groups
+            var groupData = await _context.Groups.Where(w=>w.visable == true)
             .Select(s => new { s.Local_GroupName, s.Lantin_GroupName, s.Group_Photo_Location })
             .ToListAsync();
 
