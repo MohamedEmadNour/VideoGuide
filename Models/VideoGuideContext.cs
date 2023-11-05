@@ -41,6 +41,9 @@ public partial class VideoGuideContext : DbContext
 
     public virtual DbSet<Video_Fav> Video_Favs { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see http://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=VideoGuide;Integrated Security=True; Encrypt=False;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -144,6 +147,7 @@ public partial class VideoGuideContext : DbContext
 
             entity.Property(e => e.Lantin_TagName).HasMaxLength(255);
             entity.Property(e => e.Local_TagName).HasMaxLength(255);
+            entity.Property(e => e.visable).HasDefaultValueSql("((1))");
         });
 
         modelBuilder.Entity<UserGroup>(entity =>
@@ -171,6 +175,7 @@ public partial class VideoGuideContext : DbContext
 
             entity.Property(e => e.Video_Lantin_Title).HasMaxLength(255);
             entity.Property(e => e.Video_Local_Tiltle).HasMaxLength(255);
+            entity.Property(e => e.visable).HasDefaultValueSql("((1))");
         });
 
         modelBuilder.Entity<VideoTag>(entity =>

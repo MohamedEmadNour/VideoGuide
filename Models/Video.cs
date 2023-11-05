@@ -17,6 +17,8 @@ public partial class Video
 
     public int? Video_CountOfViews { get; set; }
 
+    public bool? visable { get; set; }
+
     public virtual ICollection<VideoTag> VideoTags { get; set; } = new List<VideoTag>();
 
     public virtual ICollection<Video_Fav> Video_Favs { get; set; } = new List<Video_Fav>();
