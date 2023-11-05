@@ -3,6 +3,8 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Data;
 using VideoGuide.Data;
 using VideoGuide.IRepository;
 using VideoGuide.Models;
@@ -223,9 +225,9 @@ namespace VideoGuide.Controllers
             return Ok(RolesChecked);
         }
         [HttpPost("AddRoleToUser")]
-        public async Task<IActionResult> AddRoleToUser(string Id, string RoleId)
+        public async Task<IActionResult> AddRoleToUser(string Id, List<string> Role)
         {
-            if (Id == null || RoleId == null)
+            if (Id == null || Role.Count() == 0)
             {
                 return Ok("Please Send UserId and RoleId");
             }
@@ -234,8 +236,8 @@ namespace VideoGuide.Controllers
             {
                 return Ok("User is Not Found");
             }
-            var Role = _roleManager.Roles.Where(x => x.Id == RoleId).SingleOrDefault().Name;
-            var status = await _userManager.AddToRoleAsync(User, Role);
+            //var Role = _roleManager.Roles.Where(x => x.Id == RoleId).SingleOrDefault()?.Name;
+            var status = await _userManager.AddToRolesAsync(User, Role);
             if (!status.Succeeded)
             {
                 foreach (var error in status.Errors)
@@ -247,9 +249,9 @@ namespace VideoGuide.Controllers
             return Ok(status);
         }
         [HttpPost("RemoveRoleToUser")]
-        public async Task<IActionResult> RemoveRoleToUser(string Id, string RoleId)
+        public async Task<IActionResult> RemoveRoleToUser(string Id, List<string> Role)
         {
-            if (Id == null || RoleId == null)
+            if (Id == null || Role.Count() == 0)
             {
                 return Ok("Please Send UserId and RoleId");
             }
@@ -258,8 +260,8 @@ namespace VideoGuide.Controllers
             {
                 return Ok("User is Not Found");
             }
-            var Role = _roleManager.Roles.Where(x => x.Id == RoleId).SingleOrDefault().Name;
-            var status = await _userManager.RemoveFromRoleAsync(User, Role);
+            //var Role = _roleManager.Roles.Where(x => x.Id == RoleId).SingleOrDefault()?.Name;
+            var status = await _userManager.RemoveFromRolesAsync(User, Role);
             if (!status.Succeeded)
             {
                 foreach (var error in status.Errors)
@@ -279,6 +281,17 @@ namespace VideoGuide.Controllers
                 return Ok("UserName is not found");
             }
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            if (RestPassword.Password == "")
+            {
+                user.PasswordHash = null;
+                _unitOfWork.ApplicationUser.Update(user);
+                await _unitOfWork.Save();
+                return Ok();
+            }
+            else
+            {
+
             var status = await _userManager.ResetPasswordAsync(user, token, RestPassword.Password);
             if (!status.Succeeded)
             {
@@ -289,6 +302,7 @@ namespace VideoGuide.Controllers
                 return BadRequest(ModelState);
             }
             return Ok(status);
+            }
         }
         [HttpPost("DeleteUser")]
         public async Task<IActionResult> DeleteUser(DeleteUser DeleteUser)
@@ -308,6 +322,63 @@ namespace VideoGuide.Controllers
                 return BadRequest(ModelState);
             }
             return Ok(status);
+        }
+        [HttpPost("Change_FullName")]
+        public async Task<IActionResult> Change_FullName(Change_FullNameDTO change_FullNameDTO)
+        {
+            var user = await _userManager.FindByNameAsync(change_FullNameDTO.UserName);
+            if (user == null)
+            {
+                return Ok("UserName is not found");
+            }
+            user.FullName = change_FullNameDTO.FullName;
+            _unitOfWork.ApplicationUser.Update(user);
+            await _unitOfWork.Save();
+            return Ok();
+        }
+        [HttpPost("UpdateUser")]
+        public async Task<IActionResult> UpdateUser(UpdateUser UpdateUser)
+        {
+            var user = await _userManager.FindByNameAsync(UpdateUser.UserName);
+            if (user == null)
+            {
+                return Ok("UserName is not found");
+            }
+            if(user.FullName != UpdateUser.FullName)
+            {
+                Change_FullNameDTO change_FullNameDTO = new Change_FullNameDTO 
+                {
+                    UserName = UpdateUser.UserName, FullName = UpdateUser.FullName
+                };
+                await Change_FullName(change_FullNameDTO);
+            }
+            RestPassword restPassword = new RestPassword 
+            {
+                UserName = UpdateUser.UserName,Password = UpdateUser.Password
+            };
+            await RestPassword(restPassword);
+            var Roles = await _userManager.GetRolesAsync(user);
+            var status_Delete = await _userManager.RemoveFromRolesAsync(user, Roles);
+            if (!status_Delete.Succeeded)
+            {
+                foreach (var error in status_Delete.Errors)
+                {
+                    ModelState.AddModelError(error.Code, error.Description);
+                }
+                return Ok(ModelState);
+            }
+            var status_Insert = await _userManager.AddToRolesAsync(user, UpdateUser.Roles);
+            if (!status_Insert.Succeeded)
+            {
+                foreach (var error in status_Insert.Errors)
+                {
+                    ModelState.AddModelError(error.Code, error.Description);
+                }
+                return Ok(ModelState);
+            }
+            user.LockoutEnabled = UpdateUser.Active;
+            await _userManager.UpdateAsync(user);
+            return Ok();
         }
     }
 }

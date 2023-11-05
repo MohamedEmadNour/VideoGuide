@@ -118,6 +118,7 @@ public partial class VideoGuideContext : DbContext
 
             entity.Property(e => e.Lantin_GroupName).HasMaxLength(255);
             entity.Property(e => e.Local_GroupName).HasMaxLength(255);
+            entity.Property(e => e.visable).HasDefaultValueSql("((1))");
         });
 
         modelBuilder.Entity<GroupTag>(entity =>

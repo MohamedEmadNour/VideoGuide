@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
+using VideoGuide.Models;
+using Group = VideoGuide.Models.Group;
 
 namespace VideoGuide.View_Model
 {
@@ -19,6 +21,7 @@ namespace VideoGuide.View_Model
         public int GroupID { get; set; }
         public bool visable { get; set; } = true;
         public string Group_Photo_Location { get; set; } = string.Empty;
+        public IFormFile? Image { get; set; }
 
     }
 }

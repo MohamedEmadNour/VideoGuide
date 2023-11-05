@@ -30,29 +30,51 @@ namespace VideoGuide.Controllers
             .ToListAsync();
 
             // After the data is retrieved, then load the images
-            var groupsDTO = groupData.Select(s => new Get_GroupsDTO
+            var groupsDTO =  groupData.Select(async s => new Get_GroupsDTO
             {
                 Local_GroupName = s.Local_GroupName ?? string.Empty,
                 Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
-                Image = SendImage(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                Image = await SendImage(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                 Group_Photo_Location = s.Group_Photo_Location ?? string.Empty
-            }).ToList();
+            }).Select(s=>s.Result).ToList();
             return Ok(groupsDTO);
         }
+        public static IDictionary<string, string> GetAllImageMimeTypes()
+        {
+            return new Dictionary<string, string>
+        {
+            { ".jpg", "image/jpeg" },
+            { ".jpeg", "image/jpeg" },
+            { ".pjpeg", "image/pjpeg" },
+            { ".png", "image/png" },
+            { ".gif", "image/gif" },
+            { ".webp", "image/webp" },
+            { ".tiff", "image/tiff" },
+            { ".tif", "image/tiff" }, // TIFF has two common file extensions
+            { ".svg", "image/svg+xml" },
+            { ".bmp", "image/bmp" },
+            { ".ico", "image/vnd.microsoft.icon" },
+            { ".heif", "image/heif" },
+            { ".heic", "image/heic" },
+            // Add more MIME types as needed
+        };
+        }
         [NonAction]
-        public byte[] SendImage(string filename)
+        public async Task<FileContentResult> SendImage(string filename)
         {
             // Define the path to the file
             var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Images", filename);
-
-            // Check if the file exists
-            if (System.IO.File.Exists(imagePath))
+            if (!System.IO.File.Exists(imagePath))
             {
-                // Return the file as a byte array
-                return System.IO.File.ReadAllBytes(imagePath);
+                // If the file is not found, return an appropriate response, such as a 404
+                return null;
             }
+            var extension = Path.GetExtension(filename).ToLowerInvariant();
+            var mimeTypes = GetAllImageMimeTypes();
+            var contentType = mimeTypes.TryGetValue(extension, out var mimeType) ? mimeType : "application/octet-stream";
 
-            return null; // or return a default image or a specific byte array indicating no image found
+            var imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
+            return new FileContentResult(imageBytes, contentType);
         }
         [HttpPost("Insert_Groups") , DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
@@ -88,9 +110,9 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Groups([FromForm] Update_GroupsDTO Update_GroupsDTO)
         {
-            string filepath = (await _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID))?.Group_Photo_Location ?? string.Empty;
+            string filepath = _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID).Result?.Group_Photo_Location?? string.Empty ;
             Group group = new Group();
-            if (filepath!= Update_GroupsDTO.Group_Photo_Location)
+            if (filepath!= Update_GroupsDTO.Group_Photo_Location && Update_GroupsDTO.Image != null)
             {
 
             // Create a new name for the file
@@ -117,7 +139,8 @@ namespace VideoGuide.Controllers
                 Group_Photo_Location = dbPath,
                 visable = Update_GroupsDTO.visable
             };
-            Directory.Delete(filepath);
+                System.IO.File.Delete(filepath);
+
             }
             else
             {
@@ -126,13 +149,13 @@ namespace VideoGuide.Controllers
                 GroupID = Update_GroupsDTO.GroupID,
                 Local_GroupName = Update_GroupsDTO.Local_GroupName,
                 Lantin_GroupName = Update_GroupsDTO.Lantin_GroupName,
-                Group_Photo_Location = Update_GroupsDTO.Group_Photo_Location,
+                Group_Photo_Location = filepath,
                 visable = Update_GroupsDTO.visable
             };
             }
             await _context.Groups.SingleUpdateAsync(group);
             await _context.SaveChangesAsync();
-            return Accepted();
+            return Accepted(group);
         }
     }
 }
