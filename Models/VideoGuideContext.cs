@@ -160,7 +160,7 @@ public partial class VideoGuideContext : DbContext
 
             entity.HasOne(d => d.Group).WithMany(p => p.UserGroups)
                 .HasForeignKey(d => d.GroupID)
-                .HasConstraintName("FK__UserGroup__Group__29572725");
+                .HasConstraintName("FK_UserGroup_Groups");
 
             entity.HasOne(d => d.IdNavigation).WithMany(p => p.UserGroups)
                 .HasForeignKey(d => d.Id)

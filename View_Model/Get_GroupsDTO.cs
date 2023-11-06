@@ -8,6 +8,6 @@ namespace VideoGuide.View_Model
         public string Local_GroupName { get; set; } = string.Empty;
         public FileContentResult Image { get; set; }
         public string? Group_Photo_Location { get; set; }
-
+        public int GroupID { get; set; }
     }
 }
