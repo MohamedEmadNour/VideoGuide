@@ -12,7 +12,9 @@ namespace VideoGuide.View_Model
         [Required]
         public string Local_GroupName { get; set; } = string.Empty;
         [Required]
-        public IFormFile? Image { get; set; } 
+        public IFormFile? Image { get; set; }
+        public List<listId> listId { get; set; } = new List<listId>();
+
     }
     public class Update_GroupsDTO : Insert_GroupsDTO 
     {
@@ -22,6 +24,8 @@ namespace VideoGuide.View_Model
         public bool visable { get; set; } = true;
         public string Group_Photo_Location { get; set; } = string.Empty;
         public IFormFile? Image { get; set; }
+        public List<listId> listId { get; set; } = new List<listId>();
+
 
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using VideoGuide.Models;
 using VideoGuide.View_Model;
 
@@ -25,22 +26,52 @@ namespace VideoGuide.Controllers
         #region Group
         [HttpGet("Get_Groups")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Groups()
+        public async Task<IActionResult> Get_Groups(int? GroupID)
         {
-            var groupData = await _context.Groups.Where(w => w.visable == true)
-            .Select(s => new { s.Local_GroupName, s.Lantin_GroupName, s.Group_Photo_Location,s.GroupID })
-            .ToListAsync();
-
-            // After the data is retrieved, then load the images
-            var groupsDTO = groupData.Select(async s => new Get_GroupsDTO
+            IQueryable<Models.Group> baseQuery = _context.Groups
+                .Include(i => i.UserGroups)
+                .Where(w => w.visable == true);
+            List<Get_GroupsDTO> groupData = new List<Get_GroupsDTO>();
+            // Apply the filter only if filterId has a value
+            if (GroupID.HasValue)
             {
-                Local_GroupName = s.Local_GroupName ?? string.Empty,
-                Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
-                Image = await SendImage(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
-                Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
-                GroupID = s.GroupID
-            }).Select(s => s.Result).ToList();
-            return Ok(groupsDTO);
+                groupData = await baseQuery.Where(w => w.GroupID == GroupID.Value).Select(s => new Get_GroupsDTO
+                {
+                    Local_GroupName = s.Local_GroupName,
+                    Lantin_GroupName = s.Lantin_GroupName,
+                    Image = null, // Now calling the method that returns byte[]
+                    Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
+                    GroupID = s.GroupID,
+                    GetGroupUser = s.UserGroups.Select(u => new GetGroupUser
+                    {
+                        Id = u.Id ?? string.Empty,
+                        FullName = u.IdNavigation.FullName,
+                        GroupID = u.GroupID,
+                        Local_GroupName = u.Group.Local_GroupName,
+                        Lantin_GroupName = u.Group.Lantin_GroupName
+                    }).ToList()
+                })
+         .ToListAsync();
+            }
+            else
+            {
+                groupData = await baseQuery.Select( s => new Get_GroupsDTO
+                {
+                    Local_GroupName = s.Local_GroupName,
+                    Lantin_GroupName = s.Lantin_GroupName,
+                    Image = null, // Now calling the method that returns byte[]
+                    Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
+                    GroupID = s.GroupID
+                }).ToListAsync();
+
+            }
+            foreach (var item in groupData)
+            {
+                item.Image = await SendImage(item.Group_Photo_Location);
+            }
+            // After the data is retrieved, then load the images
+
+            return Ok(groupData);
         }
         public static IDictionary<string, string> GetAllImageMimeTypes()
         {
@@ -99,7 +130,7 @@ namespace VideoGuide.Controllers
             {
                 await Insert_GroupsDTO.Image?.CopyToAsync(fileStream);
             }
-            Group group = new Group
+            Models.Group group = new Models.Group
             {
                 Local_GroupName = Insert_GroupsDTO.Local_GroupName,
                 Lantin_GroupName = Insert_GroupsDTO.Lantin_GroupName,
@@ -107,14 +138,26 @@ namespace VideoGuide.Controllers
             };
             await _context.Groups.AddAsync(group);
             await _context.SaveChangesAsync();
-            return Accepted();
+            if (Insert_GroupsDTO.listId.Count() >0)
+            {
+                List<listGroupID> ints = new List<listGroupID>();
+                listGroupID listGroupID = new listGroupID { GroupID = group.GroupID };
+                ints.Add(listGroupID);
+                GroupUserDTO groupUserDTO = new GroupUserDTO
+                {
+                    listId = Insert_GroupsDTO.listId,
+                    listGroupID = ints
+                };
+                await AddGroupUser(groupUserDTO);
+            }
+            return Accepted(Get_Groups(group.GroupID).Result);
         }
         [HttpPut("Update_Groups"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Groups([FromForm] Update_GroupsDTO Update_GroupsDTO)
         {
             string filepath = _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID).Result?.Group_Photo_Location ?? string.Empty;
-            Group group = new Group();
+            Models.Group group = new Models.Group();
             if (filepath != Update_GroupsDTO.Group_Photo_Location && Update_GroupsDTO.Image != null)
             {
 
@@ -134,7 +177,7 @@ namespace VideoGuide.Controllers
                 {
                     await Update_GroupsDTO.Image?.CopyToAsync(fileStream);
                 }
-                group = new Group
+                group = new Models.Group
                 {
                     GroupID = Update_GroupsDTO.GroupID,
                     Local_GroupName = Update_GroupsDTO.Local_GroupName,
@@ -147,7 +190,7 @@ namespace VideoGuide.Controllers
             }
             else
             {
-                group = new Group
+                group = new Models.Group
                 {
                     GroupID = Update_GroupsDTO.GroupID,
                     Local_GroupName = Update_GroupsDTO.Local_GroupName,
@@ -181,15 +224,17 @@ namespace VideoGuide.Controllers
             await _context.BulkInsertAsync(UserGroupInsert);
             await _context.SaveChangesAsync();
             }
-            return Accepted(await _context.UserGroups.Select(s => new
+            return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
             {
-                s.Id,
-                s.IdNavigation.FullName,
-                s.GroupID,
-                s.Group.Local_GroupName,
-                s.Group.Lantin_GroupName
+                Id = s.Id?? string.Empty,
+                FullName = s.IdNavigation.FullName,
+                GroupID = s.GroupID,
+                Local_GroupName = s.Group.Local_GroupName,
+                Lantin_GroupName = s.Group.Lantin_GroupName
             }).ToListAsync());
         }
+        #endregion
+        #region Tag
         #endregion
     }
 }
