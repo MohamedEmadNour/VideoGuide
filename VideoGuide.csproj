@@ -40,15 +40,23 @@
 
   <ItemGroup>
     <None Include="wwwroot\Resources\Images\2ajqdop0.shi.png" />
+    <None Include="wwwroot\Resources\Images\4xc5momv.hcs.png" />
     <None Include="wwwroot\Resources\Images\522cirgv.e1k.png" />
     <None Include="wwwroot\Resources\Images\afmjh5du.aol.png" />
+    <None Include="wwwroot\Resources\Images\eo50g0go.e10.png" />
     <None Include="wwwroot\Resources\Images\f5pjubet.gxe.png" />
+    <None Include="wwwroot\Resources\Images\jbkjwz4a.pxv.png" />
     <None Include="wwwroot\Resources\Images\k4e2jd02.viv.png" />
     <None Include="wwwroot\Resources\Images\leu4ffy2.cj5.png" />
     <None Include="wwwroot\Resources\Images\m5oowpv4.ww3.png" />
     <None Include="wwwroot\Resources\Images\nnqtvifl.gnb.png" />
     <None Include="wwwroot\Resources\Images\roe4rh0r.3s1.png" />
+    <None Include="wwwroot\Resources\Images\rw5oodet.vdq.png" />
     <None Include="wwwroot\Resources\Images\subiq4qg.tm0.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\Images\" />
   </ItemGroup>
 
 </Project>

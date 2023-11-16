@@ -20,12 +20,14 @@ namespace VideoGuide.Controllers
         private readonly VideoGuideContext _context;
         private readonly IMapper _mapper;
         private readonly ImageUrlConverter _imageUrlConverter;
+        private readonly IWebHostEnvironment _env;
 
-        public VideoGuide(VideoGuideContext context, IMapper mapper, ImageUrlConverter imageUrlConverter)
+        public VideoGuide(VideoGuideContext context, IMapper mapper, ImageUrlConverter imageUrlConverter, IWebHostEnvironment env)
         {
             _context = context;
             _mapper = mapper;
             _imageUrlConverter = imageUrlConverter;
+            _env = env;
         }
         #region Group
         [HttpGet("Get_Groups")]
@@ -41,8 +43,8 @@ namespace VideoGuide.Controllers
             {
                 groupData = await baseQuery.Where(w => w.GroupID == GroupID.Value).Select(s => new Get_GroupsDTO
                 {
-                    Local_GroupName = s.Local_GroupName,
-                    Lantin_GroupName = s.Lantin_GroupName,
+                    Local_GroupName = s.Local_GroupName ?? string.Empty,
+                    Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
                     Image = _imageUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID,
@@ -51,8 +53,8 @@ namespace VideoGuide.Controllers
                         Id = u.Id ?? string.Empty,
                         FullName = u.IdNavigation.FullName,
                         GroupID = u.GroupID,
-                        Local_GroupName = u.Group.Local_GroupName,
-                        Lantin_GroupName = u.Group.Lantin_GroupName
+                        Local_GroupName = u.Group.Local_GroupName ?? string.Empty,
+                        Lantin_GroupName = u.Group.Lantin_GroupName ?? string.Empty
                     }).ToList()
                 })
          .ToListAsync();
@@ -61,80 +63,22 @@ namespace VideoGuide.Controllers
             {
                 groupData = await baseQuery.Select( s => new Get_GroupsDTO
                 {
-                    Local_GroupName = s.Local_GroupName,
-                    Lantin_GroupName = s.Lantin_GroupName,
+                    Local_GroupName = s.Local_GroupName??string.Empty,
+                    Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
                     Image = _imageUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID
                 }).ToListAsync();
 
             }
-
-            //foreach (var item in groupData)
-            //{
-            //    item.Image = _imageUrlConverter.ConvertToUrl(item.Group_Photo_Location??string.Empty);
-            //}
-            // After the data is retrieved, then load the images
-
             return Ok(groupData);
-        }
-        public static IDictionary<string, string> GetAllImageMimeTypes()
-        {
-            return new Dictionary<string, string>
-        {
-            { ".jpg", "image/jpeg" },
-            { ".jpeg", "image/jpeg" },
-            { ".pjpeg", "image/pjpeg" },
-            { ".png", "image/png" },
-            { ".gif", "image/gif" },
-            { ".webp", "image/webp" },
-            { ".tiff", "image/tiff" },
-            { ".tif", "image/tiff" }, // TIFF has two common file extensions
-            { ".svg", "image/svg+xml" },
-            { ".bmp", "image/bmp" },
-            { ".ico", "image/vnd.microsoft.icon" },
-            { ".heif", "image/heif" },
-            { ".heic", "image/heic" },
-            // Add more MIME types as needed
-        };
-        }
-        [NonAction]
-        public async Task<FileContentResult> SendImage(string filename)
-        {
-            // Define the path to the file
-            var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Images", filename);
-            if (!System.IO.File.Exists(imagePath))
-            {
-                // If the file is not found, return an appropriate response, such as a 404
-                return null;
-            }
-            var extension = Path.GetExtension(filename).ToLowerInvariant();
-            var mimeTypes = GetAllImageMimeTypes();
-            var contentType = mimeTypes.TryGetValue(extension, out var mimeType) ? mimeType : "application/octet-stream";
-
-            var imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
-            return new FileContentResult(imageBytes, contentType);
         }
         [HttpPost("Insert_Groups"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Insert_Groups([FromForm] Insert_GroupsDTO Insert_GroupsDTO)
         {
-            // Create a new name for the file
-            string fileName = Path.GetRandomFileName() + Path.GetExtension(Insert_GroupsDTO.Image?.FileName);
-            var folderName = Path.Combine("Resources", "Images");
+            string dbPath = await SaveImage(Insert_GroupsDTO.Image);
 
-            var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderName);
-            if (!Directory.Exists(pathToSave))
-            {
-                Directory.CreateDirectory(pathToSave);
-            }
-            var dbPath = Path.Combine(folderName, fileName); //you can add this path to a list and then return all dbPaths to the client if require
-
-            // Save the file
-            using (var fileStream = new FileStream(dbPath, FileMode.Create))
-            {
-                await Insert_GroupsDTO.Image?.CopyToAsync(fileStream);
-            }
             Models.Group group = new Models.Group
             {
                 Local_GroupName = Insert_GroupsDTO.Local_GroupName,
@@ -143,18 +87,6 @@ namespace VideoGuide.Controllers
             };
             await _context.Groups.AddAsync(group);
             await _context.SaveChangesAsync();
-            if (Insert_GroupsDTO.listId.Count() >0)
-            {
-                List<listGroupID> ints = new List<listGroupID>();
-                listGroupID listGroupID = new listGroupID { GroupID = group.GroupID };
-                ints.Add(listGroupID);
-                GroupUserDTO groupUserDTO = new GroupUserDTO
-                {
-                    listId = Insert_GroupsDTO.listId,
-                    listGroupID = ints
-                };
-                await AddGroupUser(groupUserDTO);
-            }
             return Accepted(Get_Groups(group.GroupID).Result);
         }
         [HttpPut("Update_Groups"), DisableRequestSizeLimit]
@@ -166,22 +98,8 @@ namespace VideoGuide.Controllers
             if (filepath != Update_GroupsDTO.Group_Photo_Location && Update_GroupsDTO.Image != null)
             {
 
-                // Create a new name for the file
-                string fileName = Path.GetRandomFileName() + Path.GetExtension(Update_GroupsDTO.Image?.FileName);
-                var folderName = Path.Combine("Resources", "Images");
+                string dbPath = await SaveImage(Update_GroupsDTO.Image);
 
-                var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderName);
-                if (!Directory.Exists(pathToSave))
-                {
-                    Directory.CreateDirectory(pathToSave);
-                }
-                var dbPath = Path.Combine(folderName, fileName); //you can add this path to a list and then return all dbPaths to the client if require
-
-                // Save the file
-                using (var fileStream = new FileStream(dbPath, FileMode.Create))
-                {
-                    await Update_GroupsDTO.Image?.CopyToAsync(fileStream);
-                }
                 group = new Models.Group
                 {
                     GroupID = Update_GroupsDTO.GroupID,
@@ -234,12 +152,129 @@ namespace VideoGuide.Controllers
                 Id = s.Id?? string.Empty,
                 FullName = s.IdNavigation.FullName,
                 GroupID = s.GroupID,
-                Local_GroupName = s.Group.Local_GroupName,
-                Lantin_GroupName = s.Group.Lantin_GroupName
+                Local_GroupName = s.Group.Local_GroupName ?? string.Empty,
+                Lantin_GroupName = s.Group.Lantin_GroupName ?? string.Empty
             }).ToListAsync());
         }
         #endregion
         #region Tag
+        [HttpPost("Insert_Tags"), DisableRequestSizeLimit]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Insert_Tags([FromForm] Insert_TagsDTO Insert_TagsDTO)
+        {
+            string dbPath = await SaveImage(Insert_TagsDTO.Image);
+
+            Tag Tag = new Tag
+            {
+                Local_TagName = Insert_TagsDTO.Local_TagName,
+                Lantin_TagName = Insert_TagsDTO.Lantin_TagName,
+                Tag_Photo_Location = dbPath
+            };
+            await _context.Tags.AddAsync(Tag);
+            await _context.SaveChangesAsync();
+            return Accepted(Get_Tags(Tag.TagID).Result);
+        }
+        [HttpPut("Update_Tags"), DisableRequestSizeLimit]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update_Tags([FromForm] Update_TagsDTO Update_TagsDTO)
+        {
+            string filepath = _context.Tags.FirstOrDefaultAsync(w => w.TagID == Update_TagsDTO.TagID).Result?.Tag_Photo_Location ?? string.Empty;
+            Tag Tag = new Tag();
+            if (filepath != Update_TagsDTO.Tag_Photo_Location && Update_TagsDTO.Image != null)
+            {
+
+                string dbPath = await SaveImage(Update_TagsDTO.Image);
+                Tag = new Tag
+                {
+                    TagID = Update_TagsDTO.TagID,
+                    Lantin_TagName = Update_TagsDTO.Lantin_TagName,
+                    Local_TagName = Update_TagsDTO.Local_TagName,
+                    Tag_Photo_Location = dbPath,
+                    visable = Update_TagsDTO.visable
+                };
+                System.IO.File.Delete(filepath);
+
+            }
+            else
+            {
+                Tag = new Tag
+                {
+                    TagID = Update_TagsDTO.TagID,
+                    Lantin_TagName = Update_TagsDTO.Lantin_TagName,
+                    Local_TagName = Update_TagsDTO.Local_TagName,
+                    Tag_Photo_Location = filepath,
+                    visable = Update_TagsDTO.visable
+                };
+            }
+            await _context.Tags.SingleUpdateAsync(Tag);
+            await _context.SaveChangesAsync();
+            return Accepted(Tag);
+        }
+        [HttpGet("Get_Tags")]
+        //[Authorize(Roles ="User,Admin")]
+        public async Task<IActionResult> Get_Tags(int? TagID)
+        {
+            IQueryable<Tag> baseQuery = _context.Tags
+                .Include(Grouptags => Grouptags.GroupTags)
+                .ThenInclude(Groups => Groups.Group)
+                .Where(w => w.visable == true);
+            List<Get_TagsDTO> groupData = new List<Get_TagsDTO>();
+            // Apply the filter only if filterId has a value
+            if (TagID.HasValue)
+            {
+                groupData = await baseQuery.Where(w => w.TagID == TagID.Value).Select(s => new Get_TagsDTO
+                {
+                    Local_TagName = s.Local_TagName ?? string.Empty,
+                    Lantin_TagName = s.Lantin_TagName ?? string.Empty,
+                    Image = _imageUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
+                    TagID = s.TagID,
+                    GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
+                    {
+                        GroupID = u.Group.GroupID,
+                        Local_GroupName = u.Group.Local_GroupName ?? string.Empty,
+                        Lantin_GroupName = u.Group.Lantin_GroupName ?? string.Empty
+                    }).ToList()
+                })
+         .ToListAsync();
+            }
+            else
+            {
+                groupData = await baseQuery.Select(s => new Get_TagsDTO
+                {
+                    Local_TagName = s.Local_TagName ?? string.Empty,
+                    Lantin_TagName = s.Lantin_TagName ?? string.Empty,
+                    Image = _imageUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
+                    TagID = s.TagID,
+                }).ToListAsync();
+
+            }
+            return Ok(groupData);
+        }
+        #endregion
+        #region Image
+        [NonAction]
+        public async Task<string>SaveImage(IFormFile? Image)
+        {
+            // Create a new name for the file
+            string fileName = Path.GetRandomFileName() + Path.GetExtension(Image?.FileName);
+            var folderName = Path.Combine("Resources", "Images");
+
+            var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, folderName);
+            if (!Directory.Exists(pathToSave))
+            {
+                Directory.CreateDirectory(pathToSave);
+            }
+            var dbPath = Path.Combine(folderName, fileName); //you can add this path to a list and then return all dbPaths to the client if require
+
+            // Save the file
+            using (var fileStream = new FileStream(Path.Combine(_env.WebRootPath, dbPath), FileMode.Create))
+            {
+                await Image?.CopyToAsync(fileStream);
+            }
+            return dbPath;
+        }
         #endregion
     }
 }
