@@ -77,7 +77,7 @@ builder.Services.AddCors(options =>
                .AllowCredentials();
     });
 });
-
+builder.Services.AddSingleton<ImageUrlConverter>();
 // Register AutoMapper
 builder.Services.AddAutoMapper(typeof(MapperInitilizer));
 // Configure the HTTP request pipeline.
@@ -119,7 +119,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -128,6 +127,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors("AllowOrigin");
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();

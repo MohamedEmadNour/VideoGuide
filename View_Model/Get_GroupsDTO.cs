@@ -6,7 +6,7 @@ namespace VideoGuide.View_Model
     {
         public string Lantin_GroupName { get; set; } = string.Empty;
         public string Local_GroupName { get; set; } = string.Empty;
-        public FileContentResult Image { get; set; }
+        public string Image { get; set; } = string.Empty;
         public string? Group_Photo_Location { get; set; }
         public int GroupID { get; set; }
         public virtual ICollection<GetGroupUser> GetGroupUser { get; set; } = new List<GetGroupUser>();

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using VideoGuide.Models;
+using VideoGuide.Services;
 using VideoGuide.View_Model;
 
 namespace VideoGuide.Controllers
@@ -18,10 +19,13 @@ namespace VideoGuide.Controllers
     {
         private readonly VideoGuideContext _context;
         private readonly IMapper _mapper;
-        public VideoGuide(VideoGuideContext context, IMapper mapper)
+        private readonly ImageUrlConverter _imageUrlConverter;
+
+        public VideoGuide(VideoGuideContext context, IMapper mapper, ImageUrlConverter imageUrlConverter)
         {
             _context = context;
             _mapper = mapper;
+            _imageUrlConverter = imageUrlConverter;
         }
         #region Group
         [HttpGet("Get_Groups")]
@@ -39,7 +43,7 @@ namespace VideoGuide.Controllers
                 {
                     Local_GroupName = s.Local_GroupName,
                     Lantin_GroupName = s.Lantin_GroupName,
-                    Image = null, // Now calling the method that returns byte[]
+                    Image = _imageUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID,
                     GetGroupUser = s.UserGroups.Select(u => new GetGroupUser
@@ -59,16 +63,17 @@ namespace VideoGuide.Controllers
                 {
                     Local_GroupName = s.Local_GroupName,
                     Lantin_GroupName = s.Lantin_GroupName,
-                    Image = null, // Now calling the method that returns byte[]
+                    Image = _imageUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID
                 }).ToListAsync();
 
             }
-            foreach (var item in groupData)
-            {
-                item.Image = await SendImage(item.Group_Photo_Location);
-            }
+
+            //foreach (var item in groupData)
+            //{
+            //    item.Image = _imageUrlConverter.ConvertToUrl(item.Group_Photo_Location??string.Empty);
+            //}
             // After the data is retrieved, then load the images
 
             return Ok(groupData);
@@ -116,14 +121,14 @@ namespace VideoGuide.Controllers
         {
             // Create a new name for the file
             string fileName = Path.GetRandomFileName() + Path.GetExtension(Insert_GroupsDTO.Image?.FileName);
-            var folderName = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Images");
+            var folderName = Path.Combine("Resources", "Images");
 
             var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderName);
             if (!Directory.Exists(pathToSave))
             {
                 Directory.CreateDirectory(pathToSave);
             }
-            var dbPath = Path.Combine(pathToSave, fileName); //you can add this path to a list and then return all dbPaths to the client if require
+            var dbPath = Path.Combine(folderName, fileName); //you can add this path to a list and then return all dbPaths to the client if require
 
             // Save the file
             using (var fileStream = new FileStream(dbPath, FileMode.Create))
@@ -163,14 +168,14 @@ namespace VideoGuide.Controllers
 
                 // Create a new name for the file
                 string fileName = Path.GetRandomFileName() + Path.GetExtension(Update_GroupsDTO.Image?.FileName);
-                var folderName = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Images");
+                var folderName = Path.Combine("Resources", "Images");
 
                 var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), folderName);
                 if (!Directory.Exists(pathToSave))
                 {
                     Directory.CreateDirectory(pathToSave);
                 }
-                var dbPath = Path.Combine(pathToSave, fileName); //you can add this path to a list and then return all dbPaths to the client if require
+                var dbPath = Path.Combine(folderName, fileName); //you can add this path to a list and then return all dbPaths to the client if require
 
                 // Save the file
                 using (var fileStream = new FileStream(dbPath, FileMode.Create))

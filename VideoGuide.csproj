@@ -35,8 +35,20 @@
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	  <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.32.3" />
-	  <PackageReference Include="Z.EntityFramework.Extensions.EFCore" Version="7.100.0.5" />
 	  <PackageReference Include="Z.EntityFramework.Plus.EFCore" Version="7.100.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\Resources\Images\2ajqdop0.shi.png" />
+    <None Include="wwwroot\Resources\Images\522cirgv.e1k.png" />
+    <None Include="wwwroot\Resources\Images\afmjh5du.aol.png" />
+    <None Include="wwwroot\Resources\Images\f5pjubet.gxe.png" />
+    <None Include="wwwroot\Resources\Images\k4e2jd02.viv.png" />
+    <None Include="wwwroot\Resources\Images\leu4ffy2.cj5.png" />
+    <None Include="wwwroot\Resources\Images\m5oowpv4.ww3.png" />
+    <None Include="wwwroot\Resources\Images\nnqtvifl.gnb.png" />
+    <None Include="wwwroot\Resources\Images\roe4rh0r.3s1.png" />
+    <None Include="wwwroot\Resources\Images\subiq4qg.tm0.png" />
   </ItemGroup>
 
 </Project>
