@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -19,14 +20,14 @@ namespace VideoGuide.Controllers
     {
         private readonly VideoGuideContext _context;
         private readonly IMapper _mapper;
-        private readonly ImageUrlConverter _imageUrlConverter;
+        private readonly ImageUrlConverter _fileUrlConverter;
         private readonly IWebHostEnvironment _env;
 
         public VideoGuide(VideoGuideContext context, IMapper mapper, ImageUrlConverter imageUrlConverter, IWebHostEnvironment env)
         {
             _context = context;
             _mapper = mapper;
-            _imageUrlConverter = imageUrlConverter;
+            _fileUrlConverter = imageUrlConverter;
             _env = env;
         }
         #region Group
@@ -45,7 +46,7 @@ namespace VideoGuide.Controllers
                 {
                     Local_GroupName = s.Local_GroupName ?? string.Empty,
                     Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
-                    Image = _imageUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Image = _fileUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID,
                     GetGroupUser = s.UserGroups.Select(u => new GetGroupUser
@@ -65,7 +66,7 @@ namespace VideoGuide.Controllers
                 {
                     Local_GroupName = s.Local_GroupName??string.Empty,
                     Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
-                    Image = _imageUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Image = _fileUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID
                 }).ToListAsync();
@@ -77,7 +78,7 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Insert_Groups([FromForm] Insert_GroupsDTO Insert_GroupsDTO)
         {
-            string dbPath = await SaveImage(Insert_GroupsDTO.Image);
+            string dbPath = await SaveFile(Insert_GroupsDTO.Image, "Images");
 
             Models.Group group = new Models.Group
             {
@@ -98,7 +99,7 @@ namespace VideoGuide.Controllers
             if (filepath != Update_GroupsDTO.Group_Photo_Location && Update_GroupsDTO.Image != null)
             {
 
-                string dbPath = await SaveImage(Update_GroupsDTO.Image);
+                string dbPath = await SaveFile(Update_GroupsDTO.Image, "Images");
 
                 group = new Models.Group
                 {
@@ -108,7 +109,7 @@ namespace VideoGuide.Controllers
                     Group_Photo_Location = dbPath,
                     visable = Update_GroupsDTO.visable
                 };
-                System.IO.File.Delete(filepath);
+                System.IO.File.Delete(Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath));
 
             }
             else
@@ -162,7 +163,7 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Insert_Tags([FromForm] Insert_TagsDTO Insert_TagsDTO)
         {
-            string dbPath = await SaveImage(Insert_TagsDTO.Image);
+            string dbPath = await SaveFile(Insert_TagsDTO.Image, "Images");
 
             Tag Tag = new Tag
             {
@@ -183,7 +184,7 @@ namespace VideoGuide.Controllers
             if (filepath != Update_TagsDTO.Tag_Photo_Location && Update_TagsDTO.Image != null)
             {
 
-                string dbPath = await SaveImage(Update_TagsDTO.Image);
+                string dbPath = await SaveFile(Update_TagsDTO.Image, "Images");
                 Tag = new Tag
                 {
                     TagID = Update_TagsDTO.TagID,
@@ -192,7 +193,7 @@ namespace VideoGuide.Controllers
                     Tag_Photo_Location = dbPath,
                     visable = Update_TagsDTO.visable
                 };
-                System.IO.File.Delete(filepath);
+                System.IO.File.Delete(Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath));
 
             }
             else
@@ -226,7 +227,7 @@ namespace VideoGuide.Controllers
                 {
                     Local_TagName = s.Local_TagName ?? string.Empty,
                     Lantin_TagName = s.Lantin_TagName ?? string.Empty,
-                    Image = _imageUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Image = _fileUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
                     TagID = s.TagID,
                     GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
@@ -244,7 +245,7 @@ namespace VideoGuide.Controllers
                 {
                     Local_TagName = s.Local_TagName ?? string.Empty,
                     Lantin_TagName = s.Lantin_TagName ?? string.Empty,
-                    Image = _imageUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Image = _fileUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
                     TagID = s.TagID,
                 }).ToListAsync();
@@ -253,13 +254,13 @@ namespace VideoGuide.Controllers
             return Ok(groupData);
         }
         #endregion
-        #region Image
+        #region File
         [NonAction]
-        public async Task<string>SaveImage(IFormFile? Image)
+        public async Task<string>SaveFile(IFormFile? file,string filepath)
         {
             // Create a new name for the file
-            string fileName = Path.GetRandomFileName() + Path.GetExtension(Image?.FileName);
-            var folderName = Path.Combine("Resources", "Images");
+            string fileName = Path.GetRandomFileName() + Path.GetExtension(file?.FileName);
+            var folderName = Path.Combine("Resources", filepath);
 
             var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, folderName);
             if (!Directory.Exists(pathToSave))
@@ -271,9 +272,163 @@ namespace VideoGuide.Controllers
             // Save the file
             using (var fileStream = new FileStream(Path.Combine(_env.WebRootPath, dbPath), FileMode.Create))
             {
-                await Image?.CopyToAsync(fileStream);
+                await file?.CopyToAsync(fileStream);
             }
             return dbPath;
+        }
+        #endregion
+        #region Video
+        [HttpPost("AddVideo"), DisableRequestSizeLimit]
+        public async Task<IActionResult> AddVideo([FromForm]VideoDTO VideoDTO) 
+        {
+            Video video = _mapper.Map<Video>(VideoDTO);
+            video.Video_Location = await SaveFile(VideoDTO.Video, "Videos");
+            await _context.Videos.AddAsync(video);
+            await _context.SaveChangesAsync();
+            return Ok(video);
+        }
+        [HttpGet("Get_Videos")]
+        //[Authorize(Roles ="User,Admin")]
+        public async Task<IActionResult> Get_Videos(int? TagID, int? VideoID)
+        {
+            IQueryable<Models.Video> baseQuery = _context.Videos
+                .Where(w => w.visable == true);
+            // Apply the filter only if filterId has a value
+            if (TagID.HasValue)
+            {
+                baseQuery = baseQuery.Include(TagVideo => TagVideo.VideoTags).Where(TagVideo => TagVideo.VideoTags.Select(Tag=>Tag.TagID).Contains(TagID));
+            }
+            if (VideoID.HasValue)
+            {
+                List<Get_Videos_with_tagDTO> video = new List<Get_Videos_with_tagDTO>();
+
+                video = await baseQuery.Where(w => w.VideoID == VideoID.Value).Select(Video_with_tag=> new Get_Videos_with_tagDTO
+                {
+                    Video_Local_Tiltle = Video_with_tag.Video_Local_Tiltle ?? string.Empty,
+                    Video_Lantin_Title = Video_with_tag.Video_Lantin_Title ?? string.Empty,
+                    Video = _fileUrlConverter.ConvertToUrl(Video_with_tag.Video_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Video_Location = Video_with_tag.Video_Location ?? string.Empty,
+                    VideoID = Video_with_tag.VideoID,
+                    Video_CountOfViews = Video_with_tag.Video_CountOfViews,
+                    Video_Lantin_Description = Video_with_tag.Video_Lantin_Description ?? string.Empty,
+                    Video_Local_Description = Video_with_tag.Video_Local_Description ?? string.Empty,
+                    visable = Video_with_tag.visable ?? false,
+                    GetVideoTagDTO = Video_with_tag.VideoTags.Select(Video_tag=> new GetVideoTagDTO
+                    {
+                        Lantin_TagName = Video_tag.Tag.Lantin_TagName ?? string.Empty,
+                        Local_TagName = Video_tag.Tag.Local_TagName ?? string.Empty,
+                        TagID = Video_tag.TagID ?? 0,
+                        VideoTagID = Video_tag.VideoTagID,
+                    }).ToList(),
+                }).ToListAsync();
+                return Ok(video);
+
+            }
+            else
+            {
+                List<Get_VideosDTO> video = new List<Get_VideosDTO>();
+
+                video = await baseQuery.Select(s => new Get_VideosDTO
+            {
+                Video_Local_Tiltle = s.Video_Local_Tiltle ?? string.Empty,
+                Video_Lantin_Title = s.Video_Lantin_Title ?? string.Empty,
+                Video = _fileUrlConverter.ConvertToUrl(s.Video_Location ?? string.Empty), // Now calling the method that returns byte[]
+                Video_Location = s.Video_Location ?? string.Empty,
+                VideoID = s.VideoID,
+                Video_CountOfViews = s.Video_CountOfViews,
+                Video_Lantin_Description = s.Video_Lantin_Description ?? string.Empty,
+                Video_Local_Description = s.Video_Local_Description ?? string.Empty,
+                visable = s.visable ?? false
+            }).ToListAsync();
+                return Ok(video);
+
+            }
+
+        }
+        [HttpPut("Update_Video"), DisableRequestSizeLimit]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update_Video([FromForm] UpdateVideoDTO UpdateVideoDTO)
+        {
+            string filepath = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_Location ?? string.Empty;
+            Video Video = new Video();
+            if (filepath != UpdateVideoDTO.Video_Location && UpdateVideoDTO.Video != null)
+            {
+
+                string dbPath = await SaveFile(UpdateVideoDTO.Video, "Videos");
+                Video = new Video
+                {
+                    VideoID = UpdateVideoDTO.VideoID,
+                    Video_Lantin_Title = UpdateVideoDTO.Video_Lantin_Title,
+                    Video_Local_Tiltle = UpdateVideoDTO.Video_Local_Tiltle,
+                    Video_Lantin_Description = UpdateVideoDTO.Video_Lantin_Description,
+                    Video_Local_Description = UpdateVideoDTO.Video_Local_Description,
+                    Video_Location = dbPath,
+                    visable = UpdateVideoDTO.visable,
+                    Video_CountOfViews = 0
+                };
+                string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath);
+                System.IO.File.Delete(Fullpath);
+
+            }
+            else
+            {
+                int Video_CountOfViews = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_CountOfViews ?? 0;
+
+                Video = new Video
+                {
+                    VideoID = UpdateVideoDTO.VideoID,
+                    Video_Lantin_Title = UpdateVideoDTO.Video_Lantin_Title,
+                    Video_Local_Tiltle = UpdateVideoDTO.Video_Local_Tiltle,
+                    Video_Lantin_Description = UpdateVideoDTO.Video_Lantin_Description,
+                    Video_Local_Description = UpdateVideoDTO.Video_Local_Description,
+                    Video_Location = filepath,
+                    visable = UpdateVideoDTO.visable,
+                    Video_CountOfViews = Video_CountOfViews
+                };
+            }
+            await _context.Videos.SingleUpdateAsync(Video);
+            await _context.SaveChangesAsync();
+            return Accepted(Video);
+        }
+        [HttpPut("Update_View_Video")]
+        public async Task<IActionResult> Update_Video(
+            [Range(1, int.MaxValue, ErrorMessage = "The value must be greater than 0.")]
+            [DataExists(typeof(Video), "VideoID", ErrorMessage = "This Video is Not Found")]
+            int VideoID)
+                {
+                    Video video = await _context.Videos.FindAsync(VideoID) ?? new Video();
+                    if (video.visable == false)
+                    {
+                        return Problem("This video is disabled");
+                    }
+                    video.Video_CountOfViews++;
+                    await _context.Videos.SingleUpdateAsync(video);
+                    await _context.SaveChangesAsync();
+                    return NoContent();
+                }
+
+        #endregion
+        #region VideoTag
+        [HttpPost("AddVideoTag")]
+        public async Task<IActionResult> AddVideoTag(VideoTagDTO VideoTagDTO)
+        {
+            var videotagCombinations = (from VideoID in VideoTagDTO.listVideoID.Select(listVideoID => listVideoID.VideoID)
+                                         from TagID in VideoTagDTO.listTagID.Select(listTagID => listTagID.TagID)
+                                         select new VideoTag { VideoID = VideoID, TagID = TagID }).ToList();
+            List<VideoTag> VideoTag = await _context.VideoTags.Where(VideoTag => VideoTagDTO.listVideoID.Select(video=> video.VideoID).ToList().Contains((int)VideoTag.VideoID)).ToListAsync();
+            List<VideoTag> VideoTagdelete = VideoTag.Where(videotag => !videotagCombinations.Any(videotagcom => videotagcom.VideoID == videotag.VideoID && videotagcom.TagID == videotag.TagID)).ToList();
+            List<VideoTag> VideoTagInsert = videotagCombinations.Where(videotagcom => !VideoTag.Any(videotag => videotag.VideoID == videotagcom.VideoID && videotag.TagID == videotagcom.TagID)).ToList();
+            if (VideoTagdelete.Count() > 0)
+            {
+                await _context.BulkDeleteAsync(VideoTagdelete);
+                await _context.SaveChangesAsync();
+            }
+            if (VideoTagInsert.Count() > 0)
+            {
+                await _context.BulkInsertAsync(VideoTagInsert);
+                await _context.SaveChangesAsync();
+            }
+            return Ok();
         }
         #endregion
     }

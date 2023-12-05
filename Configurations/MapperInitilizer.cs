@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VideoGuide.View_Model;
+using VideoGuide.Models;
 
 namespace VideoGuide.Configurations
 {
@@ -24,7 +25,7 @@ namespace VideoGuide.Configurations
             //    .ForMember(dest=>dest.Phone_List_Master_id , opt=>opt.Ignore())
             //    .ReverseMap();
             CreateMap<UserDTO, ApplicationUser>().ReverseMap();
-            //CreateMap<UpdatePhone_List_Detail_TypeDTO, Phone_List_Detail_Type>().ReverseMap();
+            CreateMap<VideoDTO, Video>().ReverseMap();
             //CreateMap<T_Hospital, HospitalDTO>().ReverseMap();
             //CreateMap<BuildDTO, T_Build>()
             //    .ForMember(dest=>dest.Hospital , opt=>opt.Ignore())

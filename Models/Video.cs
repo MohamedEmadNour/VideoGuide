@@ -11,7 +11,9 @@ public partial class Video
 
     public string? Video_Local_Tiltle { get; set; }
 
-    public string? Video_Description { get; set; }
+    public string? Video_Lantin_Description { get; set; }
+
+    public string? Video_Local_Description { get; set; }
 
     public string? Video_Location { get; set; }
 
