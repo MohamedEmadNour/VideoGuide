@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
@@ -88,6 +89,20 @@ namespace VideoGuide.Controllers
             };
             await _context.Groups.AddAsync(group);
             await _context.SaveChangesAsync();
+            if (Insert_GroupsDTO.listTagID.Count() > 0)
+            {
+                List<listGroupID> listGroupID = new List<listGroupID>();
+                listGroupID GroupID = new listGroupID();
+                GroupID.GroupID = group.GroupID;
+                listGroupID.Add(GroupID);
+                List<listTagID> listTagID = ConverttolistTagID(Insert_GroupsDTO.listTagID);
+                GroupTagDTO GroupTagDTO = new GroupTagDTO
+                {
+                    listTagID = listTagID,
+                    listGroupID = listGroupID
+                };
+                await AddGroupTag(GroupTagDTO);
+            }
             return Accepted(Get_Groups(group.GroupID).Result);
         }
         [HttpPut("Update_Groups"), DisableRequestSizeLimit]
@@ -125,6 +140,25 @@ namespace VideoGuide.Controllers
             }
             await _context.Groups.SingleUpdateAsync(group);
             await _context.SaveChangesAsync();
+            GroupTagDTO GroupTagDTO= new GroupTagDTO();
+            if (Update_GroupsDTO.listTagID.Count() > 0)
+            {
+                List<listGroupID> listGroupID = new List<listGroupID>();
+                listGroupID GroupID = new listGroupID();
+                GroupID.GroupID = group.GroupID;
+                listGroupID.Add(GroupID);
+                List<listTagID> listTagID = ConverttolistTagID(Update_GroupsDTO.listTagID);
+                GroupTagDTO = new GroupTagDTO
+                {
+                    listTagID = listTagID,
+                    listGroupID = listGroupID
+                };
+                await AddGroupTag(GroupTagDTO);
+            }
+            else
+            {
+                await AddGroupTag(GroupTagDTO);
+            }
             return Accepted(group);
         }
         #endregion
@@ -158,6 +192,7 @@ namespace VideoGuide.Controllers
             }).ToListAsync());
         }
         #endregion
+
         #region Tag
         [HttpPost("Insert_Tags"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
@@ -285,11 +320,26 @@ namespace VideoGuide.Controllers
             video.Video_Location = await SaveFile(VideoDTO.Video, "Videos");
             await _context.Videos.AddAsync(video);
             await _context.SaveChangesAsync();
+            if (VideoDTO.listTagID.Count()>0)
+            {
+            List<listVideoID> listVideoID = new List<listVideoID>();
+            listVideoID VideoID = new listVideoID();
+            VideoID.VideoID = video.VideoID;
+            listVideoID.Add(VideoID);
+            List<listTagID> listTagID = ConverttolistTagID(VideoDTO.listTagID);
+            VideoTagDTO VideoTagDTO = new VideoTagDTO
+            {
+                listTagID = listTagID,
+                listVideoID = listVideoID
+            };
+            await AddVideoTag(VideoTagDTO);
+            }
             return Ok(video);
         }
+
         [HttpGet("Get_Videos")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Videos(int? TagID, int? VideoID)
+        public async Task<IActionResult> Get_Videos(int? TagID, int? VideoID , string? Id = null)
         {
             IQueryable<Models.Video> baseQuery = _context.Videos
                 .Where(w => w.visable == true);
@@ -297,6 +347,10 @@ namespace VideoGuide.Controllers
             if (TagID.HasValue)
             {
                 baseQuery = baseQuery.Include(TagVideo => TagVideo.VideoTags).Where(TagVideo => TagVideo.VideoTags.Select(Tag=>Tag.TagID).Contains(TagID));
+            }
+            if (Id != null)
+            {
+                baseQuery = baseQuery.Include(Video_Fav => Video_Fav.Video_Favs).Where(Video_Fav => Video_Fav.Video_Favs.Select(Fav => Fav.Id).Contains(Id));
             }
             if (VideoID.HasValue)
             {
@@ -388,6 +442,25 @@ namespace VideoGuide.Controllers
             }
             await _context.Videos.SingleUpdateAsync(Video);
             await _context.SaveChangesAsync();
+            VideoTagDTO VideoTagDTO = new VideoTagDTO();
+            if (UpdateVideoDTO.listTagID.Count() > 0)
+            {
+                List<listVideoID> listVideoID = new List<listVideoID>();
+                listVideoID VideoID = new listVideoID();
+                VideoID.VideoID = UpdateVideoDTO.VideoID;
+                listVideoID.Add(VideoID);
+                List<listTagID> listTagID = ConverttolistTagID(UpdateVideoDTO.listTagID);
+                VideoTagDTO = new VideoTagDTO
+                {
+                    listTagID = listTagID,
+                    listVideoID = listVideoID
+                };
+                await AddVideoTag(VideoTagDTO);
+            }
+            else
+            {
+                await AddVideoTag(VideoTagDTO);
+            }
             return Accepted(Video);
         }
         [HttpPut("Update_View_Video")]
@@ -430,6 +503,44 @@ namespace VideoGuide.Controllers
             }
             return Ok();
         }
+        #endregion
+        #region GroupTag
+        [HttpPost("AddGroupTag")]
+        public async Task<IActionResult> AddGroupTag(GroupTagDTO GroupTagDTO)
+        {
+            var grouptagCombinations = (from GroupID in GroupTagDTO.listGroupID.Select(listGroupID => listGroupID.GroupID)
+                                        from TagID in GroupTagDTO.listTagID.Select(listTagID => listTagID.TagID)
+                                        select new GroupTag { GroupID = GroupID, TagID = TagID }).ToList();
+            List<GroupTag> GroupTag = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listGroupID.Select(group => group.GroupID).ToList().Contains((int)GroupTag.GroupID)).ToListAsync();
+            List<GroupTag> GroupTagdelete = GroupTag.Where(grouptag => !grouptagCombinations.Any(grouptagcom => grouptagcom.GroupID == grouptag.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
+            List<GroupTag> GroupTagInsert = grouptagCombinations.Where(grouptagcom => !GroupTag.Any(grouptag => grouptag.GroupID == grouptagcom.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
+            if (GroupTagdelete.Count() > 0)
+            {
+                await _context.BulkDeleteAsync(GroupTagdelete);
+                await _context.SaveChangesAsync();
+            }
+            if (GroupTagInsert.Count() > 0)
+            {
+                await _context.BulkInsertAsync(GroupTagInsert);
+                await _context.SaveChangesAsync();
+            }
+            return Ok();
+        }
+        #endregion
+        #region helptoconvertfrom int to object
+        [NonAction]
+        public List<listTagID> ConverttolistTagID(List<int> listint)
+        {
+            List<listTagID> listTagID = new List<listTagID>();
+            foreach (var TagintID in listint)
+            {
+                listTagID TagID = new listTagID();
+                TagID.TagID = TagintID;
+                listTagID.Add(TagID);
+            }
+            return listTagID;
+        }
+
         #endregion
     }
 }

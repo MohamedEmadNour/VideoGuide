@@ -17,6 +17,7 @@ namespace VideoGuide.View_Model
         public string? Video_Local_Description { get; set; }
         [Required]
         public IFormFile? Video { get; set; }
+        public List<int> listTagID { get; set; } = new List<int>();
         //public string? Video_Location { get; set; }
 
         //public int? Video_CountOfViews { get; set; }
@@ -57,5 +58,25 @@ namespace VideoGuide.View_Model
     public class Get_Videos_with_tagDTO : Get_VideosDTO
     {
         public virtual ICollection<GetVideoTagDTO> GetVideoTagDTO { get; set; } = new List<GetVideoTagDTO>();
+    }
+    public class VideoDTOParam
+    {
+        [Required]
+        [StringLength(255, ErrorMessage = "Video Lantin Title is very long")]
+        public string? Video_Lantin_Title { get; set; }
+        [Required]
+        [StringLength(255, ErrorMessage = "Video Local Title is very long")]
+        public string? Video_Local_Tiltle { get; set; }
+        [Required]
+        public string? Video_Lantin_Description { get; set; }
+        [Required]
+        public string? Video_Local_Description { get; set; }
+        [Required]
+        public IFormFile? Video { get; set; }
+        //public string? Video_Location { get; set; }
+
+        //public int? Video_CountOfViews { get; set; }
+
+        //public bool? visable { get; set; }
     }
 }

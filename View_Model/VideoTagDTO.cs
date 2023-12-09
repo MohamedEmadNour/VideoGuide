@@ -20,4 +20,9 @@ namespace VideoGuide.View_Model
         [DataExists(typeof(Tag), "TagID", ErrorMessage = "This Tag is Not Found")]
         public int TagID { get; set; } = 0;
     }
+    public class GroupTagDTO
+    {
+        public List<listGroupID> listGroupID { get; set; } = new List<listGroupID>();
+        public List<listTagID> listTagID { get; set; } = new List<listTagID>();
+    }
 }

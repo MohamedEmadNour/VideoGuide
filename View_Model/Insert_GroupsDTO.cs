@@ -13,6 +13,8 @@ namespace VideoGuide.View_Model
         public string Local_GroupName { get; set; } = string.Empty;
         [Required]
         public IFormFile? Image { get; set; }
+        public List<int> listTagID { get; set; } = new List<int>();
+
     }
     public class Update_GroupsDTO : Insert_GroupsDTO 
     {
