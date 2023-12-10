@@ -248,13 +248,17 @@ namespace VideoGuide.Controllers
         }
         [HttpGet("Get_Tags")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Tags(int? TagID)
+        public async Task<IActionResult> Get_Tags(int? TagID, int? GroupID = null)
         {
             IQueryable<Tag> baseQuery = _context.Tags
                 .Include(Grouptags => Grouptags.GroupTags)
                 .ThenInclude(Groups => Groups.Group)
                 .Where(w => w.visable == true);
             List<Get_TagsDTO> groupData = new List<Get_TagsDTO>();
+            if (GroupID.HasValue)
+            {
+                baseQuery = baseQuery.Where(group => group.GroupTags.Select(groupid => groupid.GroupID).Contains(GroupID));
+            }
             // Apply the filter only if filterId has a value
             if (TagID.HasValue)
             {
