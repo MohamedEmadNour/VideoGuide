@@ -26,6 +26,7 @@ namespace VideoGuide.Configurations
             //    .ReverseMap();
             CreateMap<UserDTO, ApplicationUser>().ReverseMap();
             CreateMap<VideoDTO, Video>().ReverseMap();
+            CreateMap<Video_Fav, AddFavDTO>().ReverseMap();
             //CreateMap<T_Hospital, HospitalDTO>().ReverseMap();
             //CreateMap<BuildDTO, T_Build>()
             //    .ForMember(dest=>dest.Hospital , opt=>opt.Ignore())

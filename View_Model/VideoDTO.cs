@@ -48,6 +48,10 @@ namespace VideoGuide.View_Model
         public int? Video_CountOfViews { get; set; } = 0;
         public bool visable { get; set; } = false;
     }
+    public class Get_VideoswithfavDTO : Get_VideosDTO
+    {
+        public bool fav { get; set; }
+    }
     public class GetVideoTagDTO
     {
         public int VideoTagID { get; set;}

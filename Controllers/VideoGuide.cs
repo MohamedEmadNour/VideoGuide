@@ -352,7 +352,7 @@ namespace VideoGuide.Controllers
             {
                 baseQuery = baseQuery.Include(TagVideo => TagVideo.VideoTags).Where(TagVideo => TagVideo.VideoTags.Select(Tag=>Tag.TagID).Contains(TagID));
             }
-            if (Id != null)
+            if (Id != null && !TagID.HasValue)
             {
                 baseQuery = baseQuery.Include(Video_Fav => Video_Fav.Video_Favs).Where(Video_Fav => Video_Fav.Video_Favs.Select(Fav => Fav.Id).Contains(Id));
             }
@@ -382,7 +382,7 @@ namespace VideoGuide.Controllers
                 return Ok(video);
 
             }
-            else
+            else if(!VideoID.HasValue && !TagID.HasValue)
             {
                 List<Get_VideosDTO> video = new List<Get_VideosDTO>();
 
@@ -401,7 +401,26 @@ namespace VideoGuide.Controllers
                 return Ok(video);
 
             }
+            else if(!VideoID.HasValue && TagID.HasValue && Id != null)
+            {
+                List<Get_VideoswithfavDTO> video = new List<Get_VideoswithfavDTO>();
+                video = await baseQuery.Include(fav=>fav.Video_Favs).Select(s => new Get_VideoswithfavDTO
+                {
+                    Video_Local_Tiltle = s.Video_Local_Tiltle ?? string.Empty,
+                    Video_Lantin_Title = s.Video_Lantin_Title ?? string.Empty,
+                    Video = _fileUrlConverter.ConvertToUrl(s.Video_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Video_Location = s.Video_Location ?? string.Empty,
+                    VideoID = s.VideoID,
+                    Video_CountOfViews = s.Video_CountOfViews,
+                    Video_Lantin_Description = s.Video_Lantin_Description ?? string.Empty,
+                    Video_Local_Description = s.Video_Local_Description ?? string.Empty,
+                    visable = s.visable ?? false,
+                    fav = s.Video_Favs.Count(fav=>fav.VideoID == s.VideoID)> 0? true:false
+                }).ToListAsync();
+                return Ok(video);
 
+            }
+            return NoContent();
         }
         [HttpPut("Update_Video"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
@@ -545,6 +564,24 @@ namespace VideoGuide.Controllers
             return listTagID;
         }
 
+        #endregion
+        #region Fav
+        [HttpPost("AddFav")]
+        public async Task<IActionResult> AddFav(AddFavDTO AddFavDTO)
+        {
+            Video_Fav Video_Fav = await _context.Video_Favs.Where(Fav=>Fav.VideoID == AddFavDTO.VideoID && Fav.Id == AddFavDTO.Id).FirstOrDefaultAsync();
+            if (Video_Fav == null)
+            {
+                Video_Fav=_mapper.Map<Video_Fav>(AddFavDTO);
+                await _context.Video_Favs.AddAsync(Video_Fav);
+                await _context.SaveChangesAsync();
+                return Ok();
+
+            }
+            _context.Video_Favs.Remove(Video_Fav);
+            _context.SaveChanges();
+            return Ok();
+        }
         #endregion
     }
 }
