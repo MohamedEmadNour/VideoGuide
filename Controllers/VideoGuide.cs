@@ -343,7 +343,7 @@ namespace VideoGuide.Controllers
 
         [HttpGet("Get_Videos")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Videos(int? TagID, int? VideoID , string? Id = null)
+        public async Task<IActionResult> Get_Videos(int? TagID, int? VideoID , string? Id = null,string? search = null)
         {
             IQueryable<Models.Video> baseQuery = _context.Videos
                 .Where(w => w.visable == true);
@@ -352,9 +352,17 @@ namespace VideoGuide.Controllers
             {
                 baseQuery = baseQuery.Include(TagVideo => TagVideo.VideoTags).Where(TagVideo => TagVideo.VideoTags.Select(Tag=>Tag.TagID).Contains(TagID));
             }
-            if (Id != null && !TagID.HasValue)
+            if (Id != null && !TagID.HasValue && search == null)
             {
                 baseQuery = baseQuery.Include(Video_Fav => Video_Fav.Video_Favs).Where(Video_Fav => Video_Fav.Video_Favs.Select(Fav => Fav.Id).Contains(Id));
+            }
+            if (search != null)
+            {
+                baseQuery = baseQuery.Where(ser =>
+                ser.Video_Lantin_Title.ToLower().Contains(search) ||
+                ser.Video_Local_Tiltle.ToLower().Contains(search) ||
+                ser.Video_Lantin_Description.ToLower().Contains(search) ||
+                ser.Video_Local_Description.ToLower().Contains(search));
             }
             if (VideoID.HasValue)
             {
@@ -385,7 +393,13 @@ namespace VideoGuide.Controllers
             else if(!VideoID.HasValue && !TagID.HasValue)
             {
                 List<Get_VideosDTO> video = new List<Get_VideosDTO>();
-
+                if (Id != null)
+                {
+                    List<int?> taguser = await _context.UserGroups.Where(user => user.Id == Id).
+                        SelectMany(group => group.Group.GroupTags.Select(tag => tag.TagID)).ToListAsync();
+                    baseQuery = baseQuery.Include(videotag => videotag.VideoTags).
+                        Where(videotag => videotag.VideoTags.Any(tag => taguser.Contains(tag.TagID)));
+                }
                 video = await baseQuery.Select(s => new Get_VideosDTO
             {
                 Video_Local_Tiltle = s.Video_Local_Tiltle ?? string.Empty,
@@ -399,7 +413,6 @@ namespace VideoGuide.Controllers
                 visable = s.visable ?? false
             }).ToListAsync();
                 return Ok(video);
-
             }
             else if(!VideoID.HasValue && TagID.HasValue && Id != null)
             {
