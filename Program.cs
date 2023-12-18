@@ -71,7 +71,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowOrigin", builder =>
     {
-        builder.WithOrigins("http://localhost:4200", "http://localhost:59959", "http://172.16.118.6:59959", "http://Telephone_Directory.hos.asu.edu.eg")
+        builder.WithOrigins("http://localhost:4200", "http://localhost:59959", "http://172.16.118.6:9050", "http://Telephone_Directory.hos.asu.edu.eg")
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials();
@@ -122,9 +122,9 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+}
     app.UseSwagger();
     app.UseSwaggerUI();
-}
 app.UseCors("AllowOrigin");
 app.UseHttpsRedirection();
 app.UseStaticFiles();

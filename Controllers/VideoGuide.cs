@@ -208,6 +208,20 @@ namespace VideoGuide.Controllers
             };
             await _context.Tags.AddAsync(Tag);
             await _context.SaveChangesAsync();
+            if (Insert_TagsDTO.listGroupID.Count() > 0)
+            {
+                List<listTagID> listTagID = new List<listTagID>();
+                listTagID TagID = new listTagID();
+                TagID.TagID = Tag.TagID;
+                listTagID.Add(TagID);
+                List<listGroupID> listGroupID = ConverttolistGroup(Insert_TagsDTO.listGroupID);
+                GroupTagDTO GroupTagDTO = new GroupTagDTO
+                {
+                    listTagID = listTagID,
+                    listGroupID = listGroupID
+                };
+                await AddGroupTag(GroupTagDTO);
+            }
             return Accepted(Get_Tags(Tag.TagID).Result);
         }
         [HttpPut("Update_Tags"), DisableRequestSizeLimit]
@@ -576,7 +590,18 @@ namespace VideoGuide.Controllers
             }
             return listTagID;
         }
-
+        [NonAction]
+        public List<listGroupID> ConverttolistGroup(List<int> listint)
+        {
+            List<listGroupID> listGroupID = new List<listGroupID>();
+            foreach (var GroupintID in listint)
+            {
+                listGroupID GroupID = new listGroupID();
+                GroupID.GroupID = GroupintID;
+                listGroupID.Add(GroupID);
+            }
+            return listGroupID;
+        }
         #endregion
         #region Fav
         [HttpPost("AddFav")]

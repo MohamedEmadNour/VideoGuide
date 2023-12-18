@@ -11,6 +11,7 @@ namespace VideoGuide.View_Model
             public string Local_TagName { get; set; } = string.Empty;
             [Required]
             public IFormFile? Image { get; set; }
+            public List<int> listGroupID { get; set; }
     }
         public class Update_TagsDTO : Insert_TagsDTO
     {
