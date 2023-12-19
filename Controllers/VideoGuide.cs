@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
@@ -34,7 +35,7 @@ namespace VideoGuide.Controllers
         #region Group
         [HttpGet("Get_Groups")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Groups(int? GroupID)
+        public async Task<IActionResult> Get_Groups(int? GroupID, string Id = null)
         {
             IQueryable<Models.Group> baseQuery = _context.Groups
                 .Include(i => i.UserGroups)
@@ -60,6 +61,24 @@ namespace VideoGuide.Controllers
                     }).ToList()
                 })
          .ToListAsync();
+            } else if(Id!= null)
+            {
+                groupData = await baseQuery.Where(usergroup=>usergroup.UserGroups.Select(userid=>userid.Id).Contains(Id)).Select(group=> new Get_GroupsDTO
+                {
+                    Local_GroupName = group.Local_GroupName ?? string.Empty,
+                    Lantin_GroupName = group.Lantin_GroupName ?? string.Empty,
+                    Image = _fileUrlConverter.ConvertToUrl(group.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Group_Photo_Location = group.Group_Photo_Location ?? string.Empty,
+                    GroupID = group.GroupID,
+                    GetGroupUser = group.UserGroups.Select(groupuser => new GetGroupUser
+                    {
+                        Id = groupuser.Id ?? string.Empty,
+                        FullName = groupuser.IdNavigation.FullName,
+                        GroupID = groupuser.GroupID,
+                        Local_GroupName = groupuser.Group.Local_GroupName ?? string.Empty,
+                        Lantin_GroupName = groupuser.Group.Lantin_GroupName ?? string.Empty
+                    }).ToList()
+                }).ToListAsync();
             }
             else
             {
@@ -162,36 +181,36 @@ namespace VideoGuide.Controllers
             return Accepted(group);
         }
         #endregion
-        #region GroupUser
-        [HttpPost("AddGroupUser")]
-        public async Task<IActionResult> AddGroupUser(GroupUserDTO groupUserDTOs)
-        {
-            var groupUserCombinations = (from groupId in groupUserDTOs.listGroupID.Select(listGroupID=> listGroupID.GroupID)
-                                        from UserId in groupUserDTOs.listId.Select(s => s.Id)
-                                        select new UserGroup { GroupID = groupId, Id = UserId }).ToList();
-            List<UserGroup> UserGroup = await _context.UserGroups.Where(w => groupUserDTOs.listId.Select(s => s.Id).Contains(w.Id)).ToListAsync();
-            List<UserGroup> UserGroupdelete = UserGroup.Where(w=> !groupUserCombinations.Any(g=>g.Id == w.Id && g.GroupID == w.GroupID)).ToList();
-            List<UserGroup> UserGroupInsert = groupUserCombinations.Where(w => !UserGroup.Any(u => u.Id == w.Id && u.GroupID == w.GroupID)).ToList();
-            if (UserGroupdelete.Count()>0)
-            {
-            await _context.BulkDeleteAsync(UserGroupdelete);
-            await _context.SaveChangesAsync();
-            }
-            if (UserGroupInsert.Count()>0) 
-            {
-            await _context.BulkInsertAsync(UserGroupInsert);
-            await _context.SaveChangesAsync();
-            }
-            return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
-            {
-                Id = s.Id?? string.Empty,
-                FullName = s.IdNavigation.FullName,
-                GroupID = s.GroupID,
-                Local_GroupName = s.Group.Local_GroupName ?? string.Empty,
-                Lantin_GroupName = s.Group.Lantin_GroupName ?? string.Empty
-            }).ToListAsync());
-        }
-        #endregion
+        //#region GroupUser
+        //[HttpPost("AddGroupUser")]
+        //public async Task<IActionResult> AddGroupUser(GroupUserDTO groupUserDTOs)
+        //{
+        //    var groupUserCombinations = (from groupId in groupUserDTOs.listGroupID.Select(listGroupID=> listGroupID.GroupID)
+        //                                from UserId in groupUserDTOs.listId.Select(s => s.Id)
+        //                                select new UserGroup { GroupID = groupId, Id = UserId }).ToList();
+        //    List<UserGroup> UserGroup = await _context.UserGroups.Where(w => groupUserDTOs.listId.Select(s => s.Id).Contains(w.Id)).ToListAsync();
+        //    List<UserGroup> UserGroupdelete = UserGroup.Where(w=> !groupUserCombinations.Any(g=>g.Id == w.Id && g.GroupID == w.GroupID)).ToList();
+        //    List<UserGroup> UserGroupInsert = groupUserCombinations.Where(w => !UserGroup.Any(u => u.Id == w.Id && u.GroupID == w.GroupID)).ToList();
+        //    if (UserGroupdelete.Count()>0)
+        //    {
+        //    await _context.BulkDeleteAsync(UserGroupdelete);
+        //    await _context.SaveChangesAsync();
+        //    }
+        //    if (UserGroupInsert.Count()>0) 
+        //    {
+        //    await _context.BulkInsertAsync(UserGroupInsert);
+        //    await _context.SaveChangesAsync();
+        //    }
+        //    return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
+        //    {
+        //        Id = s.Id?? string.Empty,
+        //        FullName = s.IdNavigation.FullName,
+        //        GroupID = s.GroupID,
+        //        Local_GroupName = s.Group.Local_GroupName ?? string.Empty,
+        //        Lantin_GroupName = s.Group.Lantin_GroupName ?? string.Empty
+        //    }).ToListAsync());
+        //}
+        //#endregion
 
         #region Tag
         [HttpPost("Insert_Tags"), DisableRequestSizeLimit]
@@ -575,6 +594,44 @@ namespace VideoGuide.Controllers
                 await _context.SaveChangesAsync();
             }
             return Ok();
+        }
+        #endregion
+        #region GroupUser
+        [HttpPost("Add_Group_User")]
+        public async Task<IActionResult> Add_Group_User(Group_UserDTO Group_UserDTO)
+        {
+            var groupuserCombinations = (from Group_ID in Group_UserDTO.listGroupID.Select(listGroupID => listGroupID.GroupID)
+                                         from Id in Group_UserDTO.listUserID.Select(listUserID => listUserID.Id)
+                                         select new UserGroup { GroupID = Group_ID, Id = Id }).ToList();
+            List<UserGroup> Group_User = new List<UserGroup>();
+            if (Group_UserDTO.column == "GroupID")
+            {
+             Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listGroupID.Select(Group => Group.GroupID).ToList().Contains((int)GroupUser.GroupID)).ToListAsync();
+            }
+            else if (Group_UserDTO.column == "Id")
+            {
+             Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id)).ToListAsync();
+            }
+            List<UserGroup> Group_Userdelete = Group_User.Where(GroupUser => !groupuserCombinations.Any(groupusercom => groupusercom.Id == groupusercom.Id && groupusercom.GroupID == groupusercom.GroupID)).ToList();
+            List<UserGroup> Group_UserInsert = groupuserCombinations.Where(GroupUser => !Group_User.Any(groupusercom => groupusercom.Id == GroupUser.Id && groupusercom.GroupID == GroupUser.GroupID)).ToList();
+            if (Group_Userdelete.Count() > 0)
+            {
+                await _context.BulkDeleteAsync(Group_Userdelete);
+                await _context.SaveChangesAsync();
+            }
+            if (Group_UserInsert.Count() > 0)
+            {
+                await _context.BulkInsertAsync(Group_UserInsert);
+                await _context.SaveChangesAsync();
+            }
+            return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
+            {
+                Id = s.Id ?? string.Empty,
+                FullName = s.IdNavigation.FullName,
+                GroupID = s.GroupID,
+                Local_GroupName = s.Group.Local_GroupName ?? string.Empty,
+                Lantin_GroupName = s.Group.Lantin_GroupName ?? string.Empty
+            }).ToListAsync());
         }
         #endregion
         #region helptoconvertfrom int to object

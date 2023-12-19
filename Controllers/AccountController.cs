@@ -26,9 +26,11 @@ namespace VideoGuide.Controllers
         private readonly UnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IAuthManager _authManager;
+        private readonly ImageUrlConverter _fileUrlConverter;
+        private readonly IWebHostEnvironment _env;
 
 
-        public AccountController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, VideoGuideContext context, IMapper mapper, IAuthManager authManager, UnitOfWork unitOfWork)
+        public AccountController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, VideoGuideContext context, IMapper mapper, IAuthManager authManager, UnitOfWork unitOfWork, ImageUrlConverter fileUrlConverter, IWebHostEnvironment env)
         {
             _userManager = userManager;
             _roleManager = roleManager;
@@ -36,6 +38,8 @@ namespace VideoGuide.Controllers
             _mapper = mapper;
             _authManager = authManager;
             _unitOfWork = unitOfWork;
+            _fileUrlConverter = fileUrlConverter;
+            _env = env;
         }
         [HttpPost]
         [Route("register")]
@@ -71,7 +75,22 @@ namespace VideoGuide.Controllers
                     return BadRequest(ModelState);
                 }
             }
-            
+
+            if (userDTO.listGroupID.Count()>0)
+            {
+            VideoGuide videoGuide = new VideoGuide(_context,_mapper,_fileUrlConverter,_env);
+                List<listUserID> listUserIDs = new List<listUserID>();
+                listUserID listUserID = new listUserID();
+                listUserID.Id = user.Id;
+                listUserIDs.Add(listUserID);
+                Group_UserDTO Group_UserDTO = new Group_UserDTO()
+                {
+                    listUserID = listUserIDs,
+                    listGroupID = userDTO.listGroupID,
+                    column = "Id"
+                };
+                await videoGuide.Add_Group_User(Group_UserDTO);
+            }
             await _userManager.AddToRolesAsync(user, userDTO.Roles);
 
             return Accepted();
@@ -378,6 +397,20 @@ namespace VideoGuide.Controllers
             }
             user.LockoutEnabled = UpdateUser.Active;
             await _userManager.UpdateAsync(user);
+
+                VideoGuide videoGuide = new VideoGuide(_context, _mapper, _fileUrlConverter, _env);
+                List<listUserID> listUserIDs = new List<listUserID>();
+                listUserID listUserID = new listUserID();
+                listUserID.Id = user.Id;
+                listUserIDs.Add(listUserID);
+                Group_UserDTO Group_UserDTO = new Group_UserDTO()
+                {
+                    listUserID = listUserIDs,
+                    listGroupID = UpdateUser.listGroupID,
+                    column = "Id"
+                };
+                await videoGuide.Add_Group_User(Group_UserDTO);
+            
             return Ok();
         }
     }

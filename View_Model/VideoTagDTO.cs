@@ -25,4 +25,15 @@ namespace VideoGuide.View_Model
         public List<listGroupID> listGroupID { get; set; } = new List<listGroupID>();
         public List<listTagID> listTagID { get; set; } = new List<listTagID>();
     }
+    public class Group_UserDTO
+    {
+        public List<listGroupID> listGroupID { get; set; } = new List<listGroupID>();
+        public List<listUserID> listUserID { get; set; } = new List<listUserID>();
+        public string column {  get; set; }
+    }
+    public class listUserID
+    {
+        [DataExists(typeof(AspNetUser), "Id", ErrorMessage = "This user is Not Found")]
+        public string Id { get; set; } = string.Empty;
+    }
 }

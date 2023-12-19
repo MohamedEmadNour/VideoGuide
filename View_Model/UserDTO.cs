@@ -16,6 +16,8 @@ namespace VideoGuide.View_Model
         public string FullName { get; set; } = "";
         [Required]
         public ICollection<string> Roles { get; set; } = new List<string>();
+        public List<listGroupID> listGroupID { get; set; } = new List<listGroupID>();
+
     }
     public class ChangePassword : LoginUserDTO
     {
