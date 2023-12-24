@@ -13,6 +13,7 @@
 	  <PackageReference Include="AutoMapper" Version="12.0.1" />
 	  <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
 	  <PackageReference Include="EPPlus" Version="6.2.9" />
+	  <PackageReference Include="FFmpeg.AutoGen" Version="6.1.0" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.22" />
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.22" />
 	  <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.2.0" />
@@ -40,26 +41,9 @@
 
   <ItemGroup>
     <Folder Include="Resources\Images\" />
+    <Folder Include="wwwroot\Resources\Frames\" />
+    <Folder Include="wwwroot\Resources\Images\" />
     <Folder Include="wwwroot\Resources\Videos\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="wwwroot\Resources\Images\2ajqdop0.shi.png" />
-    <None Include="wwwroot\Resources\Images\4xc5momv.hcs.png" />
-    <None Include="wwwroot\Resources\Images\522cirgv.e1k.png" />
-    <None Include="wwwroot\Resources\Images\afmjh5du.aol.png" />
-    <None Include="wwwroot\Resources\Images\boj311ec.ass.png" />
-    <None Include="wwwroot\Resources\Images\eo50g0go.e10.png" />
-    <None Include="wwwroot\Resources\Images\f5pjubet.gxe.png" />
-    <None Include="wwwroot\Resources\Images\j04sq5jp.zcy.png" />
-    <None Include="wwwroot\Resources\Images\jbkjwz4a.pxv.png" />
-    <None Include="wwwroot\Resources\Images\k4e2jd02.viv.png" />
-    <None Include="wwwroot\Resources\Images\leu4ffy2.cj5.png" />
-    <None Include="wwwroot\Resources\Images\m5oowpv4.ww3.png" />
-    <None Include="wwwroot\Resources\Images\nnqtvifl.gnb.png" />
-    <None Include="wwwroot\Resources\Images\roe4rh0r.3s1.png" />
-    <None Include="wwwroot\Resources\Images\rw5oodet.vdq.png" />
-    <None Include="wwwroot\Resources\Images\subiq4qg.tm0.png" />
   </ItemGroup>
 
 </Project>

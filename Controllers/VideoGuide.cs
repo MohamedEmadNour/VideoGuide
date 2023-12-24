@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FFmpeg.AutoGen;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -35,7 +37,7 @@ namespace VideoGuide.Controllers
         #region Group
         [HttpGet("Get_Groups")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Groups(int? GroupID, string Id = null)
+        public async Task<IActionResult> Get_Groups(int? GroupID, string? Id = null)
         {
             IQueryable<Models.Group> baseQuery = _context.Groups
                 .Include(i => i.UserGroups)
@@ -124,7 +126,7 @@ namespace VideoGuide.Controllers
             }
             return Accepted(Get_Groups(group.GroupID).Result);
         }
-        [HttpPut("Update_Groups"), DisableRequestSizeLimit]
+        [HttpPost("Update_Groups"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Groups([FromForm] Update_GroupsDTO Update_GroupsDTO)
         {
@@ -243,7 +245,7 @@ namespace VideoGuide.Controllers
             }
             return Accepted(Get_Tags(Tag.TagID).Result);
         }
-        [HttpPut("Update_Tags"), DisableRequestSizeLimit]
+        [HttpPost("Update_Tags"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Tags([FromForm] Update_TagsDTO Update_TagsDTO)
         {
@@ -348,6 +350,47 @@ namespace VideoGuide.Controllers
             }
             return dbPath;
         }
+        [NonAction]
+        public async Task<string> Convert_Video_To_Photo(string videoPath, int frameTimeInSeconds = 5)
+        {
+            string ffmpegPath = Path.Combine(Directory.GetCurrentDirectory(), @"ffmpeg\bin\ffmpeg.exe"); // Ensure FFmpeg path is correct
+            string fileName = Path.GetRandomFileName() + ".jpg";
+            var folderName = Path.Combine("Resources", "Frames");
+
+            var pathToSave = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", folderName); // Assuming _env.WebRootPath is "wwwroot"
+            if (!Directory.Exists(pathToSave))
+            {
+                Directory.CreateDirectory(pathToSave);
+            }
+
+            string outputPath = Path.Combine(pathToSave, fileName);
+            string timeArg = TimeSpan.FromSeconds(frameTimeInSeconds).ToString(@"hh\:mm\:ss");
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                Arguments = $"-ss {timeArg} -i \"{videoPath}\" -frames:v 1 -update 1 \"{Path.Combine(pathToSave, fileName).Trim()}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using (var process = new Process { StartInfo = startInfo })
+            {
+                process.Start();
+                //string errorOutput = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                //if (!string.IsNullOrEmpty(errorOutput))
+                //{
+                //    Console.WriteLine("Error: " + errorOutput);
+                //    throw new InvalidOperationException("FFmpeg error: " + errorOutput);
+                //}
+            }
+
+            return $"{folderName}/{fileName}";
+        }
         #endregion
         #region Video
         [HttpPost("AddVideo"), DisableRequestSizeLimit]
@@ -371,21 +414,36 @@ namespace VideoGuide.Controllers
             };
             await AddVideoTag(VideoTagDTO);
             }
-            return Ok(video);
+            string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, video.Video_Location);
+            if (VideoDTO.Photo == null)
+            {
+            string farmepath =  await Convert_Video_To_Photo(Fullpath);
+                video.Video_Fram_Location = farmepath;
+                await _context.Videos.SingleUpdateAsync(video);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                string farmepath = await SaveFile(VideoDTO.Video, "Frames");
+                video.Video_Fram_Location = farmepath;
+                await _context.Videos.SingleUpdateAsync(video);
+                await _context.SaveChangesAsync();
+            }
+            return Ok(Get_Videos(VideoID: video.VideoID).Result);
         }
 
         [HttpGet("Get_Videos")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Videos(int? TagID, int? VideoID , string? Id = null,string? search = null)
+        public async Task<IActionResult> Get_Videos( int? VideoID , int? TagID = null, string? Id = null,string? search = null , bool filterbygroup = false)
         {
             IQueryable<Models.Video> baseQuery = _context.Videos
                 .Where(w => w.visable == true);
             // Apply the filter only if filterId has a value
-            if (TagID.HasValue)
+            if (TagID!=null)
             {
                 baseQuery = baseQuery.Include(TagVideo => TagVideo.VideoTags).Where(TagVideo => TagVideo.VideoTags.Select(Tag=>Tag.TagID).Contains(TagID));
             }
-            if (Id != null && !TagID.HasValue && search == null)
+            if (Id != null && TagID == null && search == null)
             {
                 baseQuery = baseQuery.Include(Video_Fav => Video_Fav.Video_Favs).Where(Video_Fav => Video_Fav.Video_Favs.Select(Fav => Fav.Id).Contains(Id));
             }
@@ -406,6 +464,7 @@ namespace VideoGuide.Controllers
                     Video_Local_Tiltle = Video_with_tag.Video_Local_Tiltle ?? string.Empty,
                     Video_Lantin_Title = Video_with_tag.Video_Lantin_Title ?? string.Empty,
                     Video = _fileUrlConverter.ConvertToUrl(Video_with_tag.Video_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Frame = _fileUrlConverter.ConvertToUrl(Video_with_tag.Video_Fram_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Video_Location = Video_with_tag.Video_Location ?? string.Empty,
                     VideoID = Video_with_tag.VideoID,
                     Video_CountOfViews = Video_with_tag.Video_CountOfViews,
@@ -423,10 +482,10 @@ namespace VideoGuide.Controllers
                 return Ok(video);
 
             }
-            else if(!VideoID.HasValue && !TagID.HasValue)
+            else if(!VideoID.HasValue && TagID == null)
             {
                 List<Get_VideosDTO> video = new List<Get_VideosDTO>();
-                if (Id != null)
+                if (Id != null && filterbygroup == true)
                 {
                     List<int?> taguser = await _context.UserGroups.Where(user => user.Id == Id).
                         SelectMany(group => group.Group.GroupTags.Select(tag => tag.TagID)).ToListAsync();
@@ -438,6 +497,7 @@ namespace VideoGuide.Controllers
                 Video_Local_Tiltle = s.Video_Local_Tiltle ?? string.Empty,
                 Video_Lantin_Title = s.Video_Lantin_Title ?? string.Empty,
                 Video = _fileUrlConverter.ConvertToUrl(s.Video_Location ?? string.Empty), // Now calling the method that returns byte[]
+                Frame = _fileUrlConverter.ConvertToUrl(s.Video_Fram_Location ?? string.Empty), // Now calling the method that returns byte[]
                 Video_Location = s.Video_Location ?? string.Empty,
                 VideoID = s.VideoID,
                 Video_CountOfViews = s.Video_CountOfViews,
@@ -447,7 +507,7 @@ namespace VideoGuide.Controllers
             }).ToListAsync();
                 return Ok(video);
             }
-            else if(!VideoID.HasValue && TagID.HasValue && Id != null)
+            else if(!VideoID.HasValue && TagID != null && Id != null)
             {
                 List<Get_VideoswithfavDTO> video = new List<Get_VideoswithfavDTO>();
                 video = await baseQuery.Include(fav=>fav.Video_Favs).Select(s => new Get_VideoswithfavDTO
@@ -455,6 +515,7 @@ namespace VideoGuide.Controllers
                     Video_Local_Tiltle = s.Video_Local_Tiltle ?? string.Empty,
                     Video_Lantin_Title = s.Video_Lantin_Title ?? string.Empty,
                     Video = _fileUrlConverter.ConvertToUrl(s.Video_Location ?? string.Empty), // Now calling the method that returns byte[]
+                    Frame = _fileUrlConverter.ConvertToUrl(s.Video_Fram_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Video_Location = s.Video_Location ?? string.Empty,
                     VideoID = s.VideoID,
                     Video_CountOfViews = s.Video_CountOfViews,
@@ -468,16 +529,19 @@ namespace VideoGuide.Controllers
             }
             return NoContent();
         }
-        [HttpPut("Update_Video"), DisableRequestSizeLimit]
+        [HttpPost("Update_Video"), DisableRequestSizeLimit]
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Video([FromForm] UpdateVideoDTO UpdateVideoDTO)
         {
             string filepath = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_Location ?? string.Empty;
+            string Video_Frame_Path = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_Fram_Location ?? string.Empty;
+
             Video Video = new Video();
             if (filepath != UpdateVideoDTO.Video_Location && UpdateVideoDTO.Video != null)
             {
 
                 string dbPath = await SaveFile(UpdateVideoDTO.Video, "Videos");
+
                 Video = new Video
                 {
                     VideoID = UpdateVideoDTO.VideoID,
@@ -491,7 +555,22 @@ namespace VideoGuide.Controllers
                 };
                 string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath);
                 System.IO.File.Delete(Fullpath);
-
+                string FullpathFrame = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, Video_Frame_Path);
+                System.IO.File.Delete(FullpathFrame);
+                if (UpdateVideoDTO.Photo == null)
+                {
+                    string farmepath = await Convert_Video_To_Photo(Fullpath);
+                    Video.Video_Fram_Location = farmepath;
+                    await _context.Videos.SingleUpdateAsync(Video);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    string farmepath = await SaveFile(UpdateVideoDTO.Video, "Frames");
+                    Video.Video_Fram_Location = farmepath;
+                    await _context.Videos.SingleUpdateAsync(Video);
+                    await _context.SaveChangesAsync();
+                }
             }
             else
             {
@@ -505,6 +584,7 @@ namespace VideoGuide.Controllers
                     Video_Lantin_Description = UpdateVideoDTO.Video_Lantin_Description,
                     Video_Local_Description = UpdateVideoDTO.Video_Local_Description,
                     Video_Location = filepath,
+                    Video_Fram_Location = Video_Frame_Path,
                     visable = UpdateVideoDTO.visable,
                     Video_CountOfViews = Video_CountOfViews
                 };
@@ -532,7 +612,7 @@ namespace VideoGuide.Controllers
             }
             return Accepted(Video);
         }
-        [HttpPut("Update_View_Video")]
+        [HttpPost("Update_View_Video")]
         public async Task<IActionResult> Update_Video(
             [Range(1, int.MaxValue, ErrorMessage = "The value must be greater than 0.")]
             [DataExists(typeof(Video), "VideoID", ErrorMessage = "This Video is Not Found")]

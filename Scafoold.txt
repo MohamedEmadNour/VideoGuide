@@ -1,2 +1,2 @@
-Scaffold-DbContext "Data Source=.;Initial Catalog=VideoGuide;Integrated Security=True; Encrypt=False;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -UseDatabaseNames -Force
+Scaffold-DbContext "Data Source=172.16.118.250;Initial Catalog=VideoGuide;Persist Security info=True;User ID=Antoon;Password=Antoon;TrustServerCertificate=True;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models -UseDatabaseNames -Force
 Update-database
