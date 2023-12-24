@@ -17,6 +17,7 @@ namespace VideoGuide.View_Model
         public string? Video_Local_Description { get; set; }
         [Required]
         public IFormFile? Video { get; set; }
+        public IFormFile? Photo { get; set; }
         public List<int> listTagID { get; set; } = new List<int>();
         //public string? Video_Location { get; set; }
 
@@ -45,6 +46,7 @@ namespace VideoGuide.View_Model
         public string Video_Local_Description { get; set; } = string.Empty;
         public string Video_Location { get; set; } = string.Empty;
         public string Video { get; set; } = string.Empty;
+        public string Frame { get; set; } = string.Empty;
         public int? Video_CountOfViews { get; set; } = 0;
         public bool visable { get; set; } = false;
     }
