@@ -187,25 +187,25 @@ namespace VideoGuide.Controllers
         //[HttpPost("AddGroupUser")]
         //public async Task<IActionResult> AddGroupUser(GroupUserDTO groupUserDTOs)
         //{
-        //    var groupUserCombinations = (from groupId in groupUserDTOs.listGroupID.Select(listGroupID=> listGroupID.GroupID)
-        //                                from UserId in groupUserDTOs.listId.Select(s => s.Id)
-        //                                select new UserGroup { GroupID = groupId, Id = UserId }).ToList();
+        //    var groupUserCombinations = (from groupId in groupUserDTOs.listGroupID.Select(listGroupID => listGroupID.GroupID)
+        //                                 from UserId in groupUserDTOs.listId.Select(s => s.Id)
+        //                                 select new UserGroup { GroupID = groupId, Id = UserId }).ToList();
         //    List<UserGroup> UserGroup = await _context.UserGroups.Where(w => groupUserDTOs.listId.Select(s => s.Id).Contains(w.Id)).ToListAsync();
-        //    List<UserGroup> UserGroupdelete = UserGroup.Where(w=> !groupUserCombinations.Any(g=>g.Id == w.Id && g.GroupID == w.GroupID)).ToList();
+        //    List<UserGroup> UserGroupdelete = UserGroup.Where(w => !groupUserCombinations.Any(g => g.Id == w.Id && g.GroupID == w.GroupID)).ToList();
         //    List<UserGroup> UserGroupInsert = groupUserCombinations.Where(w => !UserGroup.Any(u => u.Id == w.Id && u.GroupID == w.GroupID)).ToList();
-        //    if (UserGroupdelete.Count()>0)
+        //    if (UserGroupdelete.Count() > 0)
         //    {
-        //    await _context.BulkDeleteAsync(UserGroupdelete);
-        //    await _context.SaveChangesAsync();
+        //        await _context.BulkDeleteAsync(UserGroupdelete);
+        //        await _context.SaveChangesAsync();
         //    }
-        //    if (UserGroupInsert.Count()>0) 
+        //    if (UserGroupInsert.Count() > 0)
         //    {
-        //    await _context.BulkInsertAsync(UserGroupInsert);
-        //    await _context.SaveChangesAsync();
+        //        await _context.BulkInsertAsync(UserGroupInsert);
+        //        await _context.SaveChangesAsync();
         //    }
         //    return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
         //    {
-        //        Id = s.Id?? string.Empty,
+        //        Id = s.Id ?? string.Empty,
         //        FullName = s.IdNavigation.FullName,
         //        GroupID = s.GroupID,
         //        Local_GroupName = s.Group.Local_GroupName ?? string.Empty,
@@ -380,7 +380,9 @@ namespace VideoGuide.Controllers
             {
                 process.Start();
                 //string errorOutput = await process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                //process.WaitForExit();
+                if (!process.WaitForExit(10000))
+                    process.Kill();
 
                 //if (!string.IsNullOrEmpty(errorOutput))
                 //{
@@ -677,8 +679,8 @@ namespace VideoGuide.Controllers
         }
         #endregion
         #region GroupUser
-        [HttpPost("Add_Group_User")]
-        public async Task<IActionResult> Add_Group_User(Group_UserDTO Group_UserDTO)
+        [HttpPost("AddGroupUser")]
+        public async Task<IActionResult> AddGroupUser(Group_UserDTO Group_UserDTO)
         {
             var groupuserCombinations = (from Group_ID in Group_UserDTO.listGroupID.Select(listGroupID => listGroupID.GroupID)
                                          from Id in Group_UserDTO.listUserID.Select(listUserID => listUserID.Id)

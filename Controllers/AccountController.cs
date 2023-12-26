@@ -89,7 +89,7 @@ namespace VideoGuide.Controllers
                     listGroupID = userDTO.listGroupID,
                     column = "Id"
                 };
-                await videoGuide.Add_Group_User(Group_UserDTO);
+                await videoGuide.AddGroupUser(Group_UserDTO);
             }
             await _userManager.AddToRolesAsync(user, userDTO.Roles);
 
@@ -409,7 +409,7 @@ namespace VideoGuide.Controllers
                     listGroupID = UpdateUser.listGroupID,
                     column = "Id"
                 };
-                await videoGuide.Add_Group_User(Group_UserDTO);
+                await videoGuide.AddGroupUser(Group_UserDTO);
             
             return Ok();
         }

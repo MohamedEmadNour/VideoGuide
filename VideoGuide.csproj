@@ -41,9 +41,7 @@
 
   <ItemGroup>
     <Folder Include="Resources\Images\" />
-    <Folder Include="wwwroot\Resources\Frames\" />
     <Folder Include="wwwroot\Resources\Images\" />
-    <Folder Include="wwwroot\Resources\Videos\" />
   </ItemGroup>
 
 </Project>

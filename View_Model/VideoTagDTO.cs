@@ -30,6 +30,10 @@ namespace VideoGuide.View_Model
         public List<listGroupID> listGroupID { get; set; } = new List<listGroupID>();
         public List<listUserID> listUserID { get; set; } = new List<listUserID>();
         public string column {  get; set; }
+        public Group_UserDTO()
+        {
+            column = "Id";
+        }
     }
     public class listUserID
     {
