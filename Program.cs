@@ -1,6 +1,7 @@
 using ASU_Research_2022.Repository;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -117,13 +118,17 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = long.MaxValue;
+});
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
 }
-    app.UseSwagger();
+
+app.UseSwagger();
     app.UseSwaggerUI();
 app.UseCors("AllowOrigin");
 app.UseHttpsRedirection();

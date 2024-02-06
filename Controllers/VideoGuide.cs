@@ -241,7 +241,7 @@ namespace VideoGuide.Controllers
                     listTagID = listTagID,
                     listGroupID = listGroupID
                 };
-                await AddGroupTag(GroupTagDTO);
+                await AddTagGroup(GroupTagDTO);
             }
             return Accepted(Get_Tags(Tag.TagID).Result);
         }
@@ -279,6 +279,17 @@ namespace VideoGuide.Controllers
             }
             await _context.Tags.SingleUpdateAsync(Tag);
             await _context.SaveChangesAsync();
+            List<listTagID> listTagID = new List<listTagID>();
+            listTagID TagID = new listTagID();
+            TagID.TagID = Tag.TagID;
+            listTagID.Add(TagID);
+            List<listGroupID> listGroupID = ConverttolistGroup(Update_TagsDTO.listGroupID);
+            GroupTagDTO GroupTagDTO = new GroupTagDTO
+            {
+                listTagID = listTagID,
+                listGroupID = listGroupID
+            };
+            await AddTagGroup(GroupTagDTO);
             return Accepted(Tag);
         }
         [HttpGet("Get_Tags")]
@@ -419,14 +430,14 @@ namespace VideoGuide.Controllers
             string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, video.Video_Location);
             if (VideoDTO.Photo == null)
             {
-            string farmepath =  await Convert_Video_To_Photo(Fullpath);
+                string farmepath =  await Convert_Video_To_Photo(Fullpath);
                 video.Video_Fram_Location = farmepath;
                 await _context.Videos.SingleUpdateAsync(video);
                 await _context.SaveChangesAsync();
             }
             else
             {
-                string farmepath = await SaveFile(VideoDTO.Video, "Frames");
+                string farmepath = await SaveFile(VideoDTO.Photo, "Frames");
                 video.Video_Fram_Location = farmepath;
                 await _context.Videos.SingleUpdateAsync(video);
                 await _context.SaveChangesAsync();
@@ -677,6 +688,29 @@ namespace VideoGuide.Controllers
             }
             return Ok();
         }
+        #endregion
+        #region AddTagGroup
+        [HttpPost("AddTagGroup")]
+        public async Task<IActionResult> AddTagGroup(GroupTagDTO GroupTagDTO)
+        {
+            var tagGroupCombinations = (from GroupID in GroupTagDTO.listGroupID.Select(listGroupID => listGroupID.GroupID)
+                                        from TagID in GroupTagDTO.listTagID.Select(listTagID => listTagID.TagID)
+                                        select new GroupTag { GroupID = GroupID, TagID = TagID }).ToList();
+            List<GroupTag> tagGroup = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listTagID.Select(Tag => Tag.TagID).ToList().Contains((int)GroupTag.TagID)).ToListAsync();
+            List<GroupTag> GroupTagdelete = tagGroup.Where(tag => !tagGroupCombinations.Any(grouptagcom => grouptagcom.GroupID == tag.GroupID && grouptagcom.TagID == tag.TagID)).ToList();
+            List<GroupTag> GroupTagInsert = tagGroupCombinations.Where(grouptagcom => !tagGroup.Any(grouptag => grouptag.GroupID == grouptagcom.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
+            if (GroupTagdelete.Count() > 0)
+            {
+                await _context.BulkDeleteAsync(GroupTagdelete);
+                await _context.SaveChangesAsync();
+            }
+            if (GroupTagInsert.Count() > 0)
+            {
+                await _context.BulkInsertAsync(GroupTagInsert);
+                await _context.SaveChangesAsync();
+            }
+            return Ok();
+        } 
         #endregion
         #region GroupUser
         [HttpPost("AddGroupUser")]
