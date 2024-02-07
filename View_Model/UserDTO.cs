@@ -37,9 +37,14 @@ namespace VideoGuide.View_Model
         public string UserName { get; set; } = "";
         
     }
-    public class UpdateUser : UserDTO
+    public class UpdateUser 
     {
+        [Required]
+        public string UserName { get; set; } = "";
+        [Required]
+        public string FullName { get; set; } = "";
         public bool Active { get; set; } = true;
+        public ICollection<string> Roles { get; set; } = new List<string>();
     }
     public class Change_FullNameDTO : DeleteUser
     {

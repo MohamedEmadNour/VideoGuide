@@ -3,6 +3,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Data;
 using VideoGuide.Data;
@@ -123,7 +124,7 @@ namespace VideoGuide.Controllers
             {
                 Token = await _authManager.CreateToken(user)
                 ,
-                user = new { user.Id, user.FullName }
+                user = new { user.Id, user.FullName , user.UserName }
             });
 #pragma warning restore CS8604 // Possible null reference argument.
 
@@ -146,8 +147,10 @@ namespace VideoGuide.Controllers
                 return Problem($"User Name or Password is incorrect", statusCode: 401);
             }
             var user = await _userManager.FindByNameAsync(userDTO.UserName);
-            await _userManager.ChangePasswordAsync(user, userDTO.Password, userDTO.NewPassword);
-            return Ok(user);
+            var result = await _userManager.ChangePasswordAsync(user, userDTO.Password, userDTO.NewPassword);
+            if (result.Succeeded)
+                return Ok(user);
+            return Ok(result);
 
         }
         [HttpGet]
@@ -155,9 +158,11 @@ namespace VideoGuide.Controllers
         [ProducesResponseType(StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Get_User()
+        public async Task<IActionResult> Get_User(string? UserName)
         {
-            return Ok(await _unitOfWork.ApplicationUser.GetWithSelect(selector: a => new { a.Id, a.FullName }));
+            if (UserName is not null)
+                return Ok(await _context.AspNetUsers.Where(userName=>userName.UserName == UserName).Include(role=>role.Roles).ToListAsync());
+            return Ok(await _unitOfWork.ApplicationUser.GetWithSelect(selector: a => new { a.Id, a.FullName , a.UserName }));
         }
         [HttpPost("AddRole")]
         public async Task<IActionResult> AddRole(string RoleName)
@@ -371,46 +376,39 @@ namespace VideoGuide.Controllers
                 };
                 await Change_FullName(change_FullNameDTO);
             }
-            RestPassword restPassword = new RestPassword 
-            {
-                UserName = UpdateUser.UserName,Password = UpdateUser.Password
-            };
-            await RestPassword(restPassword);
-            var Roles = await _userManager.GetRolesAsync(user);
-            var status_Delete = await _userManager.RemoveFromRolesAsync(user, Roles);
-            if (!status_Delete.Succeeded)
-            {
-                foreach (var error in status_Delete.Errors)
+
+                var Roles = await _userManager.GetRolesAsync(user);
+                var Compare = new Compare();
+                var check_list = Compare.CompareLists<string>(Roles, UpdateUser.Roles.ToList());
+                if (!check_list.areEqual)
                 {
-                    ModelState.AddModelError(error.Code, error.Description);
+                    if (check_list.list1NotInList2.Count() > 0 && check_list.list1NotInList2.ToList() != null)
+                    {
+                        var status_Delete = await _userManager.RemoveFromRolesAsync(user, check_list.list1NotInList2);
+                        if (!status_Delete.Succeeded)
+                        {
+                            foreach (var error in status_Delete.Errors)
+                            {
+                                ModelState.AddModelError(error.Code, error.Description);
+                            }
+                            return Ok(ModelState);
+                        }
+                    }
+                    if (check_list.list2NotInList1.ToList().Count() > 0 && check_list.list2NotInList1.ToList() != null)
+                    {
+                        var status_Insert = await _userManager.AddToRolesAsync(user, check_list.list2NotInList1);
+                        if (!status_Insert.Succeeded)
+                        {
+                            foreach (var error in status_Insert.Errors)
+                            {
+                                ModelState.AddModelError(error.Code, error.Description);
+                            }
+                            return Ok(ModelState);
+                        }
+                    }
                 }
-                return Ok(ModelState);
-            }
-            var status_Insert = await _userManager.AddToRolesAsync(user, UpdateUser.Roles);
-            if (!status_Insert.Succeeded)
-            {
-                foreach (var error in status_Insert.Errors)
-                {
-                    ModelState.AddModelError(error.Code, error.Description);
-                }
-                return Ok(ModelState);
-            }
             user.LockoutEnabled = UpdateUser.Active;
             await _userManager.UpdateAsync(user);
-
-                VideoGuide videoGuide = new VideoGuide(_context, _mapper, _fileUrlConverter, _env);
-                List<listUserID> listUserIDs = new List<listUserID>();
-                listUserID listUserID = new listUserID();
-                listUserID.Id = user.Id;
-                listUserIDs.Add(listUserID);
-                Group_UserDTO Group_UserDTO = new Group_UserDTO()
-                {
-                    listUserID = listUserIDs,
-                    listGroupID = UpdateUser.listGroupID,
-                    column = "Id"
-                };
-                await videoGuide.AddGroupUser(Group_UserDTO);
-            
             return Ok();
         }
     }
