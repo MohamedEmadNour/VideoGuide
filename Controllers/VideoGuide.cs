@@ -7,12 +7,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using VideoGuide.Models;
+using VideoGuide.Repository;
 using VideoGuide.Services;
 using VideoGuide.View_Model;
 
@@ -26,7 +28,6 @@ namespace VideoGuide.Controllers
         private readonly IMapper _mapper;
         private readonly ImageUrlConverter _fileUrlConverter;
         private readonly IWebHostEnvironment _env;
-
         public VideoGuide(VideoGuideContext context, IMapper mapper, ImageUrlConverter imageUrlConverter, IWebHostEnvironment env)
         {
             _context = context;
@@ -674,18 +675,20 @@ namespace VideoGuide.Controllers
                                         from TagID in GroupTagDTO.listTagID.Select(listTagID => listTagID.TagID)
                                         select new GroupTag { GroupID = GroupID, TagID = TagID }).ToList();
             List<GroupTag> GroupTag = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listGroupID.Select(group => group.GroupID).ToList().Contains((int)GroupTag.GroupID)).ToListAsync();
-            List<GroupTag> GroupTagdelete = GroupTag.Where(grouptag => !grouptagCombinations.Any(grouptagcom => grouptagcom.GroupID == grouptag.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
-            List<GroupTag> GroupTagInsert = grouptagCombinations.Where(grouptagcom => !GroupTag.Any(grouptag => grouptag.GroupID == grouptagcom.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
-            if (GroupTagdelete.Count() > 0)
-            {
-                await _context.BulkDeleteAsync(GroupTagdelete);
-                await _context.SaveChangesAsync();
-            }
-            if (GroupTagInsert.Count() > 0)
-            {
-                await _context.BulkInsertAsync(GroupTagInsert);
-                await _context.SaveChangesAsync();
-            }
+            //List<GroupTag> GroupTagdelete = GroupTag.Where(grouptag => !grouptagCombinations.Any(grouptagcom => grouptagcom.GroupID == grouptag.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
+            //List<GroupTag> GroupTagInsert = grouptagCombinations.Where(grouptagcom => !GroupTag.Any(grouptag => grouptag.GroupID == grouptagcom.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
+            var check_list = Compare.CompareListsObject<GroupTag>(GroupTag, grouptagCombinations, new List<string> { "GroupTagID" });
+            if (!check_list.areEqual)
+                if (check_list.list1NotInList2.Count() > 0)
+                    {
+                        await _context.BulkDeleteAsync(check_list.list1NotInList2);
+                        await _context.SaveChangesAsync();
+                    }
+                if (check_list.list2NotInList1.Count() > 0)
+                    {
+                        await _context.BulkInsertAsync(check_list.list2NotInList1);
+                        await _context.SaveChangesAsync();
+                    }
             return Ok();
         }
         #endregion
@@ -697,18 +700,19 @@ namespace VideoGuide.Controllers
                                         from TagID in GroupTagDTO.listTagID.Select(listTagID => listTagID.TagID)
                                         select new GroupTag { GroupID = GroupID, TagID = TagID }).ToList();
             List<GroupTag> tagGroup = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listTagID.Select(Tag => Tag.TagID).ToList().Contains((int)GroupTag.TagID)).ToListAsync();
-            List<GroupTag> GroupTagdelete = tagGroup.Where(tag => !tagGroupCombinations.Any(grouptagcom => grouptagcom.GroupID == tag.GroupID && grouptagcom.TagID == tag.TagID)).ToList();
-            List<GroupTag> GroupTagInsert = tagGroupCombinations.Where(grouptagcom => !tagGroup.Any(grouptag => grouptag.GroupID == grouptagcom.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
-            if (GroupTagdelete.Count() > 0)
-            {
-                await _context.BulkDeleteAsync(GroupTagdelete);
-                await _context.SaveChangesAsync();
-            }
-            if (GroupTagInsert.Count() > 0)
-            {
-                await _context.BulkInsertAsync(GroupTagInsert);
-                await _context.SaveChangesAsync();
-            }
+            var check_list = Compare.CompareListsObject<GroupTag>(tagGroup, tagGroupCombinations,new List<string> { "GroupTagID" });
+            
+            if(!check_list.areEqual)
+                if (check_list.list1NotInList2.Count() > 0)
+                {
+                    await _context.BulkDeleteAsync(check_list.list1NotInList2);
+                    await _context.SaveChangesAsync();
+                }
+                if (check_list.list2NotInList1.Count() > 0)
+                {
+                    await _context.BulkInsertAsync(check_list.list2NotInList1);
+                    await _context.SaveChangesAsync();
+                }
             return Ok();
         } 
         #endregion
