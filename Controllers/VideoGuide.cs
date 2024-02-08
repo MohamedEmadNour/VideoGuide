@@ -17,7 +17,7 @@ using VideoGuide.Models;
 using VideoGuide.Repository;
 using VideoGuide.Services;
 using VideoGuide.View_Model;
-
+using FFmpeg.Net;
 namespace VideoGuide.Controllers
 {
     [Route("api/[controller]")]
@@ -381,7 +381,7 @@ namespace VideoGuide.Controllers
             var startInfo = new ProcessStartInfo
             {
                 FileName = ffmpegPath,
-                Arguments = $"-ss {timeArg} -i \"{videoPath}\" -frames:v 1 -update 1 \"{Path.Combine(pathToSave, fileName).Trim()}\"",
+                Arguments = $"-ss {timeArg} -i \"{videoPath}\" -frames:v 1 \"{outputPath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -391,16 +391,19 @@ namespace VideoGuide.Controllers
             using (var process = new Process { StartInfo = startInfo })
             {
                 process.Start();
-                //string errorOutput = await process.StandardError.ReadToEndAsync();
-                //process.WaitForExit();
-                if (!process.WaitForExit(10000))
-                    process.Kill();
+                string errorOutput = await process.StandardError.ReadToEndAsync();
+                string output = await process.StandardOutput.ReadToEndAsync(); // Read FFmpeg output if needed
 
-                //if (!string.IsNullOrEmpty(errorOutput))
-                //{
-                //    Console.WriteLine("Error: " + errorOutput);
-                //    throw new InvalidOperationException("FFmpeg error: " + errorOutput);
-                //}
+                await process.WaitForExitAsync();
+                //if (!process.WaitForExit(10000))
+                //    process.Kill();
+
+                if (process.ExitCode != 0) // Check for FFmpeg exit code
+                {
+                    Console.WriteLine("FFmpeg exited with error code: " + process.ExitCode);
+                    Console.WriteLine("Error output: " + errorOutput);
+                    throw new InvalidOperationException("FFmpeg error: " + errorOutput);
+                }
             }
 
             return $"{folderName}/{fileName}";
@@ -652,18 +655,21 @@ namespace VideoGuide.Controllers
                                          from TagID in VideoTagDTO.listTagID.Select(listTagID => listTagID.TagID)
                                          select new VideoTag { VideoID = VideoID, TagID = TagID }).ToList();
             List<VideoTag> VideoTag = await _context.VideoTags.Where(VideoTag => VideoTagDTO.listVideoID.Select(video=> video.VideoID).ToList().Contains((int)VideoTag.VideoID)).ToListAsync();
-            List<VideoTag> VideoTagdelete = VideoTag.Where(videotag => !videotagCombinations.Any(videotagcom => videotagcom.VideoID == videotag.VideoID && videotagcom.TagID == videotag.TagID)).ToList();
-            List<VideoTag> VideoTagInsert = videotagCombinations.Where(videotagcom => !VideoTag.Any(videotag => videotag.VideoID == videotagcom.VideoID && videotag.TagID == videotagcom.TagID)).ToList();
-            if (VideoTagdelete.Count() > 0)
-            {
-                await _context.BulkDeleteAsync(VideoTagdelete);
-                await _context.SaveChangesAsync();
-            }
-            if (VideoTagInsert.Count() > 0)
-            {
-                await _context.BulkInsertAsync(VideoTagInsert);
-                await _context.SaveChangesAsync();
-            }
+            //List<VideoTag> VideoTagdelete = VideoTag.Where(videotag => !videotagCombinations.Any(videotagcom => videotagcom.VideoID == videotag.VideoID && videotagcom.TagID == videotag.TagID)).ToList();
+            //List<VideoTag> VideoTagInsert = videotagCombinations.Where(videotagcom => !VideoTag.Any(videotag => videotag.VideoID == videotagcom.VideoID && videotag.TagID == videotagcom.TagID)).ToList();
+            var check_list = Compare.CompareListsObject<VideoTag>(VideoTag, videotagCombinations, new List<string> { "VideoTagID" });
+            if (!check_list.areEqual)
+
+                if (check_list.list1NotInList2.Count() > 0)
+                    {
+                        await _context.BulkDeleteAsync(check_list.list1NotInList2);
+                        await _context.SaveChangesAsync();
+                    }
+                if (check_list.list2NotInList1.Count() > 0)
+                    {
+                        await _context.BulkInsertAsync(check_list.list2NotInList1);
+                        await _context.SaveChangesAsync();
+                    }
             return Ok();
         }
         #endregion
@@ -732,18 +738,25 @@ namespace VideoGuide.Controllers
             {
              Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id)).ToListAsync();
             }
-            List<UserGroup> Group_Userdelete = Group_User.Where(GroupUser => !groupuserCombinations.Any(groupusercom => groupusercom.Id == groupusercom.Id && groupusercom.GroupID == groupusercom.GroupID)).ToList();
-            List<UserGroup> Group_UserInsert = groupuserCombinations.Where(GroupUser => !Group_User.Any(groupusercom => groupusercom.Id == GroupUser.Id && groupusercom.GroupID == GroupUser.GroupID)).ToList();
-            if (Group_Userdelete.Count() > 0)
+            else
             {
-                await _context.BulkDeleteAsync(Group_Userdelete);
-                await _context.SaveChangesAsync();
+                Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id)).ToListAsync();
             }
-            if (Group_UserInsert.Count() > 0)
-            {
-                await _context.BulkInsertAsync(Group_UserInsert);
-                await _context.SaveChangesAsync();
-            }
+            var check_list = Compare.CompareListsObject<UserGroup>(Group_User, groupuserCombinations, new List<string> { "UserGroupID" });
+
+            //List<UserGroup> Group_Userdelete = Group_User.Where(GroupUser => !groupuserCombinations.Any(groupusercom => groupusercom.Id == groupusercom.Id && groupusercom.GroupID == groupusercom.GroupID)).ToList();
+            //List<UserGroup> Group_UserInsert = groupuserCombinations.Where(GroupUser => !Group_User.Any(groupusercom => groupusercom.Id == GroupUser.Id && groupusercom.GroupID == GroupUser.GroupID)).ToList();
+            if (!check_list.areEqual)
+                if (check_list.list1NotInList2.Count() > 0)
+                    {
+                        await _context.BulkDeleteAsync(check_list.list1NotInList2);
+                        await _context.SaveChangesAsync();
+                    }
+                if (check_list.list2NotInList1.Count() > 0)
+                    {
+                        await _context.BulkInsertAsync(check_list.list2NotInList1);
+                        await _context.SaveChangesAsync();
+                    }
             return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
             {
                 Id = s.Id ?? string.Empty,
