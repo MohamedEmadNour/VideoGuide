@@ -1,0 +1,15 @@
+Change Password : {
+ check object send from front end
+};
+Rest Password :Hidden button;
+register : check object send from front end;
+UpdateUser: {
+1-hidden password field
+2-Check request from http://172.16.118.250:85/api/AccountUpdateUser to http://172.16.118.250:85/api/Account/UpdateUser
+};
+AddGroupUser : check data to need send to api
+Edite Group : Action is done but after send error
+Edite Tag :{1-need choose group to assign tag
+}
+Assign Tags To Group : function not run
+Update Video: need send tag when update video
