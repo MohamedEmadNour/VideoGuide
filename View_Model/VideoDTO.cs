@@ -49,6 +49,8 @@ namespace VideoGuide.View_Model
         public string Frame { get; set; } = string.Empty;
         public int? Video_CountOfViews { get; set; } = 0;
         public bool visable { get; set; } = false;
+        public virtual ICollection<GetVideoTagDTO> GetVideoTagDTO { get; set; } = new List<GetVideoTagDTO>();
+
     }
     public class Get_VideoswithfavDTO : Get_VideosDTO
     {
@@ -63,7 +65,6 @@ namespace VideoGuide.View_Model
     }
     public class Get_Videos_with_tagDTO : Get_VideosDTO
     {
-        public virtual ICollection<GetVideoTagDTO> GetVideoTagDTO { get; set; } = new List<GetVideoTagDTO>();
     }
     public class VideoDTOParam
     {

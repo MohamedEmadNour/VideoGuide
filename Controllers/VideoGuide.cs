@@ -334,6 +334,12 @@ namespace VideoGuide.Controllers
                     Image = _fileUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
                     TagID = s.TagID,
+                    GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
+                    {
+                        GroupID = u.Group.GroupID,
+                        Local_GroupName = u.Group.Local_GroupName ?? string.Empty,
+                        Lantin_GroupName = u.Group.Lantin_GroupName ?? string.Empty
+                    }).ToList()
                 }).ToListAsync();
 
             }
@@ -520,8 +526,15 @@ namespace VideoGuide.Controllers
                 Video_CountOfViews = s.Video_CountOfViews,
                 Video_Lantin_Description = s.Video_Lantin_Description ?? string.Empty,
                 Video_Local_Description = s.Video_Local_Description ?? string.Empty,
-                visable = s.visable ?? false
-            }).ToListAsync();
+                visable = s.visable ?? false,
+                GetVideoTagDTO = s.VideoTags.Select(Video_tag => new GetVideoTagDTO
+                {
+                    Lantin_TagName = Video_tag.Tag.Lantin_TagName ?? string.Empty,
+                    Local_TagName = Video_tag.Tag.Local_TagName ?? string.Empty,
+                    TagID = Video_tag.TagID ?? 0,
+                    VideoTagID = Video_tag.VideoTagID,
+                }).ToList(),
+                }).ToListAsync();
                 return Ok(video);
             }
             else if(!VideoID.HasValue && TagID != null && Id != null)
