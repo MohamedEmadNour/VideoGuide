@@ -585,6 +585,7 @@ namespace VideoGuide.Controllers
                 };
                 string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath);
                 System.IO.File.Delete(Fullpath);
+                Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, dbPath);
                 string FullpathFrame = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, Video_Frame_Path);
                 System.IO.File.Delete(FullpathFrame);
                 if (UpdateVideoDTO.Photo == null)
