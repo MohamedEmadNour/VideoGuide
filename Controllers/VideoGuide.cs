@@ -133,7 +133,7 @@ namespace VideoGuide.Controllers
         {
             string filepath = _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID).Result?.Group_Photo_Location ?? string.Empty;
             Models.Group group = new Models.Group();
-            if (filepath != Update_GroupsDTO.Group_Photo_Location && Update_GroupsDTO.Image != null)
+            if (filepath != Update_GroupsDTO.Group_Photo_Location || Update_GroupsDTO.Image != null)
             {
 
                 string dbPath = await SaveFile(Update_GroupsDTO.Image, "Images");
@@ -567,7 +567,7 @@ namespace VideoGuide.Controllers
             string Video_Frame_Path = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_Fram_Location ?? string.Empty;
 
             Video Video = new Video();
-            if (filepath != UpdateVideoDTO.Video_Location && UpdateVideoDTO.Video != null)
+            if (filepath != UpdateVideoDTO.Video_Location || UpdateVideoDTO.Video != null)
             {
 
                 string dbPath = await SaveFile(UpdateVideoDTO.Video, "Videos");

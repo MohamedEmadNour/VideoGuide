@@ -27,14 +27,17 @@ namespace VideoGuide.View_Model
     }
     public class UpdateVideoDTO : VideoDTO
     {
-        [Required]
-        public bool? visable { get; set; }
+        public bool? visable { get; set; } = true;
         [Range(1, int.MaxValue, ErrorMessage = "The value must be greater than 0.")]
         [DataExists(typeof(Video), "VideoID", ErrorMessage = "This Video is Not Found")]
         public int VideoID { get; set; }
 
         public string? Video_Location { get; set; }
         public IFormFile? Video { get; set; }
+        public UpdateVideoDTO()
+        {
+            visable = true;
+        }
 
     }
     public class Get_VideosDTO
