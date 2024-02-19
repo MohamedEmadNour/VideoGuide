@@ -9,6 +9,7 @@ namespace VideoGuide.View_Model
         public string Image { get; set; } = string.Empty;
         public string? Group_Photo_Location { get; set; }
         public int GroupID { get; set; }
+        public bool? visable { get; set; }
         public virtual ICollection<GetGroupUser> GetGroupUser { get; set; } = new List<GetGroupUser>();
     }
     public class GetGroupUser
@@ -18,5 +19,6 @@ namespace VideoGuide.View_Model
         public int? GroupID { get; set; } = 0;
         public string Local_GroupName { get; set; } = string.Empty;
         public string Lantin_GroupName { get; set; } = string.Empty;
+
     }
 }

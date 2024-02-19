@@ -7,6 +7,8 @@
         public string Image { get; set; } = string.Empty;
         public string? Tag_Photo_Location { get; set; }
         public int TagID { get; set; }
+        public bool? visable { get; set; }
+
         public virtual ICollection<GetTagGroup> GetTagGroup { get; set; } = new List<GetTagGroup>();
     }
     public class GetTagGroup

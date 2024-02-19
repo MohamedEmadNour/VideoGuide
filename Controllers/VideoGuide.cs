@@ -54,6 +54,7 @@ namespace VideoGuide.Controllers
                     Image = _fileUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
                     GroupID = s.GroupID,
+                    visable = s.visable,
                     GetGroupUser = s.UserGroups.Select(u => new GetGroupUser
                     {
                         Id = u.Id ?? string.Empty,
@@ -73,6 +74,7 @@ namespace VideoGuide.Controllers
                     Image = _fileUrlConverter.ConvertToUrl(group.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = group.Group_Photo_Location ?? string.Empty,
                     GroupID = group.GroupID,
+                    visable = group.visable,
                     GetGroupUser = group.UserGroups.Select(groupuser => new GetGroupUser
                     {
                         Id = groupuser.Id ?? string.Empty,
@@ -91,7 +93,8 @@ namespace VideoGuide.Controllers
                     Lantin_GroupName = s.Lantin_GroupName ?? string.Empty,
                     Image = _fileUrlConverter.ConvertToUrl(s.Group_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Group_Photo_Location = s.Group_Photo_Location ?? string.Empty,
-                    GroupID = s.GroupID
+                    GroupID = s.GroupID,
+                    visable = s.visable
                 }).ToListAsync();
 
             }
@@ -316,6 +319,7 @@ namespace VideoGuide.Controllers
                     Image = _fileUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
                     TagID = s.TagID,
+                    visable = s.visable,
                     GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
                     {
                         GroupID = u.Group.GroupID,
@@ -334,6 +338,7 @@ namespace VideoGuide.Controllers
                     Image = _fileUrlConverter.ConvertToUrl(s.Tag_Photo_Location ?? string.Empty), // Now calling the method that returns byte[]
                     Tag_Photo_Location = s.Tag_Photo_Location ?? string.Empty,
                     TagID = s.TagID,
+                    visable = s.visable,
                     GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
                     {
                         GroupID = u.Group.GroupID,
