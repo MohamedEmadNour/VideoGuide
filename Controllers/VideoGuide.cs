@@ -255,7 +255,7 @@ namespace VideoGuide.Controllers
         {
             string filepath = _context.Tags.FirstOrDefaultAsync(w => w.TagID == Update_TagsDTO.TagID).Result?.Tag_Photo_Location ?? string.Empty;
             Tag Tag = new Tag();
-            if (filepath != Update_TagsDTO.Tag_Photo_Location && Update_TagsDTO.Image != null)
+            if (filepath != Update_TagsDTO.Tag_Photo_Location || Update_TagsDTO.Image != null)
             {
 
                 string dbPath = await SaveFile(Update_TagsDTO.Image, "Images");
