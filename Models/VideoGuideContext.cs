@@ -114,6 +114,9 @@ public partial class VideoGuideContext : DbContext
         {
             entity.HasKey(e => e.GroupID).HasName("PK__Groups__149AF30AFED2749C");
 
+            entity.HasIndex(e => e.DisplayOrder, "IX_Groups").IsUnique();
+
+            entity.Property(e => e.DisplayOrder).HasDefaultValueSql("([dbo].[GetDefaultDisplayOrder]())");
             entity.Property(e => e.Lantin_GroupName).HasMaxLength(255);
             entity.Property(e => e.Local_GroupName).HasMaxLength(255);
             entity.Property(e => e.visable).HasDefaultValueSql("((1))");
@@ -123,7 +126,11 @@ public partial class VideoGuideContext : DbContext
         {
             entity.HasKey(e => e.GroupTagID).HasName("PK__GroupTag__0E20B580D677E04D");
 
-            entity.ToTable("GroupTag");
+            entity.ToTable("GroupTag", tb => tb.HasTrigger("TR_GroupTag_DefaultDisplayOrder"));
+
+            entity.HasIndex(e => new { e.GroupID, e.DisplayOrder }, "IX_GroupTag").IsUnique();
+
+            entity.Property(e => e.DisplayOrder).HasDefaultValueSql("((0))");
 
             entity.HasOne(d => d.Group).WithMany(p => p.GroupTags)
                 .HasForeignKey(d => d.GroupID)
@@ -178,7 +185,9 @@ public partial class VideoGuideContext : DbContext
         {
             entity.HasKey(e => e.VideoTagID).HasName("PK__VideoTag__8A32F004A061C8B8");
 
-            entity.ToTable("VideoTag");
+            entity.ToTable("VideoTag", tb => tb.HasTrigger("TR_VideoTag_DefaultDisplayOrder"));
+
+            entity.Property(e => e.DisplayOrder).HasDefaultValueSql("((0))");
 
             entity.HasOne(d => d.Tag).WithMany(p => p.VideoTags)
                 .HasForeignKey(d => d.TagID)

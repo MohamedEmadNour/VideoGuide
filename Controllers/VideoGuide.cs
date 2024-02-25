@@ -38,11 +38,12 @@ namespace VideoGuide.Controllers
         #region Group
         [HttpGet("Get_Groups")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Groups(int? GroupID, string? Id = null)
+        public async Task<IActionResult> Get_Groups(int? GroupID, string? Id = null , bool isAdmin = false)
         {
             IQueryable<Models.Group> baseQuery = _context.Groups
-                .Include(i => i.UserGroups)
-                .Where(w => w.visable == true);
+                .Include(i => i.UserGroups).OrderBy(displayOder=>displayOder.DisplayOrder);
+            if(!isAdmin)
+                baseQuery = baseQuery.Where(w => w.visable == true);
             List<Get_GroupsDTO> groupData = new List<Get_GroupsDTO>();
             // Apply the filter only if filterId has a value
             if (GroupID.HasValue)
@@ -298,16 +299,18 @@ namespace VideoGuide.Controllers
         }
         [HttpGet("Get_Tags")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Tags(int? TagID, int? GroupID = null)
+        public async Task<IActionResult> Get_Tags(int? TagID, int? GroupID = null , bool isAdmin = false)
         {
             IQueryable<Tag> baseQuery = _context.Tags
                 .Include(Grouptags => Grouptags.GroupTags)
-                .ThenInclude(Groups => Groups.Group)
-                .Where(w => w.visable == true);
+                .ThenInclude(Groups => Groups.Group);
+            if(!isAdmin)
+                baseQuery = baseQuery.Where(w => w.visable == true);
             List<Get_TagsDTO> groupData = new List<Get_TagsDTO>();
             if (GroupID.HasValue)
             {
-                baseQuery = baseQuery.Where(group => group.GroupTags.Select(groupid => groupid.GroupID).Contains(GroupID));
+                baseQuery = baseQuery.Where(group => group.GroupTags.Any(groupid => groupid.GroupID == GroupID))
+                    .OrderBy(group=> group.GroupTags.FirstOrDefault(displayOder => displayOder.GroupID == GroupID).DisplayOrder);
             }
             // Apply the filter only if filterId has a value
             if (TagID.HasValue)
@@ -462,14 +465,19 @@ namespace VideoGuide.Controllers
 
         [HttpGet("Get_Videos")]
         //[Authorize(Roles ="User,Admin")]
-        public async Task<IActionResult> Get_Videos( int? VideoID , int? TagID = null, string? Id = null,string? search = null , bool filterbygroup = false)
+        public async Task<IActionResult> Get_Videos( int? VideoID , int? TagID = null, string? Id = null,string? search = null , bool filterbygroup = false , bool isAdmin= false)
         {
-            IQueryable<Models.Video> baseQuery = _context.Videos
-                .Where(w => w.visable == true);
+            IQueryable<Models.Video> baseQuery = _context.Videos;
+            if(!isAdmin)
+                baseQuery = baseQuery.Where(w => w.visable == true);
             // Apply the filter only if filterId has a value
-            if (TagID!=null)
+            if (TagID != null)
             {
-                baseQuery = baseQuery.Include(TagVideo => TagVideo.VideoTags).Where(TagVideo => TagVideo.VideoTags.Select(Tag=>Tag.TagID).Contains(TagID));
+                baseQuery = baseQuery
+                    .Include(TagVideo => TagVideo.VideoTags)
+                    .Where(TagVideo => TagVideo.VideoTags
+                        .Select(Tag => Tag.TagID).Contains(TagID))
+                    .OrderBy(tagVideo => tagVideo.VideoTags.FirstOrDefault(tag => tag.TagID == TagID).DisplayOrder);
             }
             if (Id != null && TagID == null && search == null)
             {

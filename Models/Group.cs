@@ -15,6 +15,8 @@ public partial class Group
 
     public bool? visable { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public virtual ICollection<GroupTag> GroupTags { get; set; } = new List<GroupTag>();
 
     public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();

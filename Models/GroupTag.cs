@@ -11,6 +11,8 @@ public partial class GroupTag
 
     public int? TagID { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public virtual Group? Group { get; set; }
 
     public virtual Tag? Tag { get; set; }
