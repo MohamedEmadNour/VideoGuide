@@ -41,6 +41,7 @@ namespace VideoGuide.Controllers
             _unitOfWork = unitOfWork;
             _fileUrlConverter = fileUrlConverter;
             _env = env;
+
         }
         [HttpPost]
         [Route("register")]

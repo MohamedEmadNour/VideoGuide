@@ -1,6 +1,8 @@
 using ASU_Research_2022.Repository;
+using AutoMapper;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -80,7 +82,32 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddSingleton<ImageUrlConverter>();
 // Register AutoMapper
-builder.Services.AddAutoMapper(typeof(MapperInitilizer));
+
+// Initialize AutoMapper
+var config = new MapperConfiguration(cfg =>
+{
+    var assembly = typeof(Program).Assembly; // Assuming Program is a class in your project
+
+    // Get all types from the assembly
+    var types = assembly.GetTypes();
+
+    // Get all types from the Models and View_Model (or any other) namespaces
+    var modelTypes = types.Where(t => t.Namespace == "VideoGuide.Models");
+    var dtoTypes = types.Where(t => t.Namespace == "VideoGuide.View_Model");
+
+    // Iterate through DTO types
+    foreach (var dtoType in dtoTypes)
+    {
+        foreach (var modelType in modelTypes)
+        {
+            cfg.CreateMap(dtoType, modelType).ReverseMap();
+        }
+    }
+});
+var mapper = config.CreateMapper();
+builder.Services.AddSingleton<IMapper>(mapper);
+//builder.Services.AddScoped<MappingService>();
+//builder.Services.AddAutoMapper(typeof(MapperInitilizer));
 // Configure the HTTP request pipeline.
 if (builder.Environment.IsDevelopment())
 {

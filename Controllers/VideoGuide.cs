@@ -28,12 +28,14 @@ namespace VideoGuide.Controllers
         private readonly IMapper _mapper;
         private readonly ImageUrlConverter _fileUrlConverter;
         private readonly IWebHostEnvironment _env;
+
         public VideoGuide(VideoGuideContext context, IMapper mapper, ImageUrlConverter imageUrlConverter, IWebHostEnvironment env)
         {
             _context = context;
             _mapper = mapper;
             _fileUrlConverter = imageUrlConverter;
             _env = env;
+
         }
         #region Group
         [HttpGet("Get_Groups")]
@@ -59,9 +61,9 @@ namespace VideoGuide.Controllers
                     GetGroupUser = s.UserGroups.Select(u => new GetGroupUser
                     {
                         Id = u.Id ?? string.Empty,
-                        FullName = u.IdNavigation.FullName,
+                        FullName = u.IdNavigation!.FullName,
                         GroupID = u.GroupID,
-                        Local_GroupName = u.Group.Local_GroupName ?? string.Empty,
+                        Local_GroupName = u.Group!.Local_GroupName ?? string.Empty,
                         Lantin_GroupName = u.Group.Lantin_GroupName ?? string.Empty
                     }).ToList()
                 })
@@ -79,9 +81,9 @@ namespace VideoGuide.Controllers
                     GetGroupUser = group.UserGroups.Select(groupuser => new GetGroupUser
                     {
                         Id = groupuser.Id ?? string.Empty,
-                        FullName = groupuser.IdNavigation.FullName,
+                        FullName = groupuser.IdNavigation!.FullName,
                         GroupID = groupuser.GroupID,
-                        Local_GroupName = groupuser.Group.Local_GroupName ?? string.Empty,
+                        Local_GroupName = groupuser.Group!.Local_GroupName ?? string.Empty,
                         Lantin_GroupName = groupuser.Group.Lantin_GroupName ?? string.Empty
                     }).ToList()
                 }).ToListAsync();
@@ -310,7 +312,7 @@ namespace VideoGuide.Controllers
             if (GroupID.HasValue)
             {
                 baseQuery = baseQuery.Where(group => group.GroupTags.Any(groupid => groupid.GroupID == GroupID))
-                    .OrderBy(group=> group.GroupTags.FirstOrDefault(displayOder => displayOder.GroupID == GroupID).DisplayOrder);
+                    .OrderBy(group=> group.GroupTags.FirstOrDefault(displayOder => displayOder.GroupID == GroupID)!.DisplayOrder);
             }
             // Apply the filter only if filterId has a value
             if (TagID.HasValue)
@@ -325,7 +327,7 @@ namespace VideoGuide.Controllers
                     visable = s.visable,
                     GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
                     {
-                        GroupID = u.Group.GroupID,
+                        GroupID = u.Group!.GroupID,
                         Local_GroupName = u.Group.Local_GroupName ?? string.Empty,
                         Lantin_GroupName = u.Group.Lantin_GroupName ?? string.Empty
                     }).ToList()
@@ -344,7 +346,7 @@ namespace VideoGuide.Controllers
                     visable = s.visable,
                     GetTagGroup = s.GroupTags.Select(u => new GetTagGroup
                     {
-                        GroupID = u.Group.GroupID,
+                        GroupID = u.Group!.GroupID,
                         Local_GroupName = u.Group.Local_GroupName ?? string.Empty,
                         Lantin_GroupName = u.Group.Lantin_GroupName ?? string.Empty
                     }).ToList()
@@ -372,7 +374,7 @@ namespace VideoGuide.Controllers
             // Save the file
             using (var fileStream = new FileStream(Path.Combine(_env.WebRootPath, dbPath), FileMode.Create))
             {
-                await file?.CopyToAsync(fileStream);
+                await file?.CopyToAsync(fileStream)!;
             }
             return dbPath;
         }
@@ -477,7 +479,7 @@ namespace VideoGuide.Controllers
                     .Include(TagVideo => TagVideo.VideoTags)
                     .Where(TagVideo => TagVideo.VideoTags
                         .Select(Tag => Tag.TagID).Contains(TagID))
-                    .OrderBy(tagVideo => tagVideo.VideoTags.FirstOrDefault(tag => tag.TagID == TagID).DisplayOrder);
+                    .OrderBy(tagVideo => tagVideo.VideoTags.FirstOrDefault(tag => tag.TagID == TagID)!.DisplayOrder);
             }
             if (Id != null && TagID == null && search == null)
             {
@@ -486,10 +488,10 @@ namespace VideoGuide.Controllers
             if (search != null)
             {
                 baseQuery = baseQuery.Where(ser =>
-                ser.Video_Lantin_Title.ToLower().Contains(search) ||
-                ser.Video_Local_Tiltle.ToLower().Contains(search) ||
-                ser.Video_Lantin_Description.ToLower().Contains(search) ||
-                ser.Video_Local_Description.ToLower().Contains(search));
+                ser.Video_Lantin_Title!.ToLower().Contains(search) ||
+                ser.Video_Local_Tiltle!.ToLower().Contains(search) ||
+                ser.Video_Lantin_Description!.ToLower().Contains(search) ||
+                ser.Video_Local_Description!.ToLower().Contains(search));
             }
             if (VideoID.HasValue)
             {
@@ -509,7 +511,7 @@ namespace VideoGuide.Controllers
                     visable = Video_with_tag.visable ?? false,
                     GetVideoTagDTO = Video_with_tag.VideoTags.Select(Video_tag=> new GetVideoTagDTO
                     {
-                        Lantin_TagName = Video_tag.Tag.Lantin_TagName ?? string.Empty,
+                        Lantin_TagName = Video_tag.Tag!.Lantin_TagName ?? string.Empty,
                         Local_TagName = Video_tag.Tag.Local_TagName ?? string.Empty,
                         TagID = Video_tag.TagID ?? 0,
                         VideoTagID = Video_tag.VideoTagID,
@@ -524,7 +526,7 @@ namespace VideoGuide.Controllers
                 if (Id != null && filterbygroup == true)
                 {
                     List<int?> taguser = await _context.UserGroups.Where(user => user.Id == Id).
-                        SelectMany(group => group.Group.GroupTags.Select(tag => tag.TagID)).ToListAsync();
+                        SelectMany(group => group.Group!.GroupTags.Select(tag => tag.TagID)).ToListAsync();
                     baseQuery = baseQuery.Include(videotag => videotag.VideoTags).
                         Where(videotag => videotag.VideoTags.Any(tag => taguser.Contains(tag.TagID)));
                 }
@@ -542,7 +544,7 @@ namespace VideoGuide.Controllers
                 visable = s.visable ?? false,
                 GetVideoTagDTO = s.VideoTags.Select(Video_tag => new GetVideoTagDTO
                 {
-                    Lantin_TagName = Video_tag.Tag.Lantin_TagName ?? string.Empty,
+                    Lantin_TagName = Video_tag.Tag!.Lantin_TagName ?? string.Empty,
                     Local_TagName = Video_tag.Tag.Local_TagName ?? string.Empty,
                     TagID = Video_tag.TagID ?? 0,
                     VideoTagID = Video_tag.VideoTagID,
@@ -681,7 +683,7 @@ namespace VideoGuide.Controllers
             var videotagCombinations = (from VideoID in VideoTagDTO.listVideoID.Select(listVideoID => listVideoID.VideoID)
                                          from TagID in VideoTagDTO.listTagID.Select(listTagID => listTagID.TagID)
                                          select new VideoTag { VideoID = VideoID, TagID = TagID }).ToList();
-            List<VideoTag> VideoTag = await _context.VideoTags.Where(VideoTag => VideoTagDTO.listVideoID.Select(video=> video.VideoID).ToList().Contains((int)VideoTag.VideoID)).ToListAsync();
+            List<VideoTag> VideoTag = await _context.VideoTags.Where(VideoTag => VideoTagDTO.listVideoID.Select(video=> video.VideoID).ToList().Contains((int)VideoTag.VideoID!)).ToListAsync();
             //List<VideoTag> VideoTagdelete = VideoTag.Where(videotag => !videotagCombinations.Any(videotagcom => videotagcom.VideoID == videotag.VideoID && videotagcom.TagID == videotag.TagID)).ToList();
             //List<VideoTag> VideoTagInsert = videotagCombinations.Where(videotagcom => !VideoTag.Any(videotag => videotag.VideoID == videotagcom.VideoID && videotag.TagID == videotagcom.TagID)).ToList();
             var check_list = Compare.CompareListsObject<VideoTag>(VideoTag, videotagCombinations, new List<string> { "VideoTagID" });
@@ -707,7 +709,7 @@ namespace VideoGuide.Controllers
             var grouptagCombinations = (from GroupID in GroupTagDTO.listGroupID.Select(listGroupID => listGroupID.GroupID)
                                         from TagID in GroupTagDTO.listTagID.Select(listTagID => listTagID.TagID)
                                         select new GroupTag { GroupID = GroupID, TagID = TagID }).ToList();
-            List<GroupTag> GroupTag = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listGroupID.Select(group => group.GroupID).ToList().Contains((int)GroupTag.GroupID)).ToListAsync();
+            List<GroupTag> GroupTag = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listGroupID.Select(group => group.GroupID).ToList().Contains((int)GroupTag.GroupID!)).ToListAsync();
             //List<GroupTag> GroupTagdelete = GroupTag.Where(grouptag => !grouptagCombinations.Any(grouptagcom => grouptagcom.GroupID == grouptag.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
             //List<GroupTag> GroupTagInsert = grouptagCombinations.Where(grouptagcom => !GroupTag.Any(grouptag => grouptag.GroupID == grouptagcom.GroupID && grouptagcom.TagID == grouptag.TagID)).ToList();
             var check_list = Compare.CompareListsObject<GroupTag>(GroupTag, grouptagCombinations, new List<string> { "GroupTagID" });
@@ -732,7 +734,7 @@ namespace VideoGuide.Controllers
             var tagGroupCombinations = (from GroupID in GroupTagDTO.listGroupID.Select(listGroupID => listGroupID.GroupID)
                                         from TagID in GroupTagDTO.listTagID.Select(listTagID => listTagID.TagID)
                                         select new GroupTag { GroupID = GroupID, TagID = TagID }).ToList();
-            List<GroupTag> tagGroup = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listTagID.Select(Tag => Tag.TagID).ToList().Contains((int)GroupTag.TagID)).ToListAsync();
+            List<GroupTag> tagGroup = await _context.GroupTags.Where(GroupTag => GroupTagDTO.listTagID.Select(Tag => Tag.TagID).ToList().Contains((int)GroupTag.TagID!)).ToListAsync();
             var check_list = Compare.CompareListsObject<GroupTag>(tagGroup, tagGroupCombinations,new List<string> { "GroupTagID" });
             
             if(!check_list.areEqual)
@@ -759,15 +761,15 @@ namespace VideoGuide.Controllers
             List<UserGroup> Group_User = new List<UserGroup>();
             if (Group_UserDTO.column == "GroupID")
             {
-             Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listGroupID.Select(Group => Group.GroupID).ToList().Contains((int)GroupUser.GroupID)).ToListAsync();
+             Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listGroupID.Select(Group => Group.GroupID).ToList().Contains((int)GroupUser.GroupID!)).ToListAsync();
             }
             else if (Group_UserDTO.column == "Id")
             {
-             Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id)).ToListAsync();
+             Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id!)).ToListAsync();
             }
             else
             {
-                Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id)).ToListAsync();
+                Group_User = await _context.UserGroups.Where(GroupUser => Group_UserDTO.listUserID.Select(User => User.Id).ToList().Contains(GroupUser.Id!)).ToListAsync();
             }
             var check_list = Compare.CompareListsObject<UserGroup>(Group_User, groupuserCombinations, new List<string> { "UserGroupID" });
 
@@ -787,9 +789,9 @@ namespace VideoGuide.Controllers
             return Accepted(await _context.UserGroups.Select(s => new GetGroupUser
             {
                 Id = s.Id ?? string.Empty,
-                FullName = s.IdNavigation.FullName,
+                FullName = s.IdNavigation!.FullName,
                 GroupID = s.GroupID,
-                Local_GroupName = s.Group.Local_GroupName ?? string.Empty,
+                Local_GroupName = s.Group!.Local_GroupName ?? string.Empty,
                 Lantin_GroupName = s.Group.Lantin_GroupName ?? string.Empty
             }).ToListAsync());
         }
@@ -824,10 +826,12 @@ namespace VideoGuide.Controllers
         [HttpPost("AddFav")]
         public async Task<IActionResult> AddFav(AddFavDTO AddFavDTO)
         {
-            Video_Fav Video_Fav = await _context.Video_Favs.Where(Fav=>Fav.VideoID == AddFavDTO.VideoID && Fav.Id == AddFavDTO.Id).FirstOrDefaultAsync();
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+            Video_Fav Video_Fav = await _context.Video_Favs.FirstOrDefaultAsync(Fav=>Fav.VideoID == AddFavDTO.VideoID && Fav.Id == AddFavDTO.Id);
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
             if (Video_Fav == null)
             {
-                Video_Fav=_mapper.Map<Video_Fav>(AddFavDTO);
+                Video_Fav= _mapper.Map<Video_Fav>(AddFavDTO);
                 await _context.Video_Favs.AddAsync(Video_Fav);
                 await _context.SaveChangesAsync();
                 return Ok();
