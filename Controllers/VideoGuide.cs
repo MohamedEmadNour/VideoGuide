@@ -137,35 +137,17 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Groups([FromForm] Update_GroupsDTO Update_GroupsDTO)
         {
-            string filepath = _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID).Result?.Group_Photo_Location ?? string.Empty;
-            Models.Group group = new Models.Group();
-            if (filepath != Update_GroupsDTO.Group_Photo_Location || Update_GroupsDTO.Image != null)
+            //string filepath = _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID).Result?.Group_Photo_Location ?? string.Empty;
+            Models.Group group = _context.Groups.FirstOrDefaultAsync(w => w.GroupID == Update_GroupsDTO.GroupID).Result!;
+            if (group.Group_Photo_Location != Update_GroupsDTO.Group_Photo_Location || Update_GroupsDTO.Image != null)
             {
-
                 string dbPath = await SaveFile(Update_GroupsDTO.Image, "Images");
-
-                group = new Models.Group
-                {
-                    GroupID = Update_GroupsDTO.GroupID,
-                    Local_GroupName = Update_GroupsDTO.Local_GroupName,
-                    Lantin_GroupName = Update_GroupsDTO.Lantin_GroupName,
-                    Group_Photo_Location = dbPath,
-                    visable = Update_GroupsDTO.visable
-                };
-                System.IO.File.Delete(Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath));
-
+                System.IO.File.Delete(Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, group.Group_Photo_Location));
             }
-            else
-            {
-                group = new Models.Group
-                {
-                    GroupID = Update_GroupsDTO.GroupID,
-                    Local_GroupName = Update_GroupsDTO.Local_GroupName,
-                    Lantin_GroupName = Update_GroupsDTO.Lantin_GroupName,
-                    Group_Photo_Location = filepath,
-                    visable = Update_GroupsDTO.visable
-                };
-            }
+            Change_Display_Order change_Display_Order = new Change_Display_Order(_context);
+            change_Display_Order.Group(group, Update_GroupsDTO.DisplayOrder);
+                _mapper.Map(Update_GroupsDTO, group);
+            
             await _context.Groups.SingleUpdateAsync(group);
             await _context.SaveChangesAsync();
             GroupTagDTO GroupTagDTO= new GroupTagDTO();
@@ -256,9 +238,9 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Tags([FromForm] Update_TagsDTO Update_TagsDTO)
         {
-            string filepath = _context.Tags.FirstOrDefaultAsync(w => w.TagID == Update_TagsDTO.TagID).Result?.Tag_Photo_Location ?? string.Empty;
+            var getTag = _context.Tags.FirstOrDefaultAsync(w => w.TagID == Update_TagsDTO.TagID).Result;
             Tag Tag = new Tag();
-            if (filepath != Update_TagsDTO.Tag_Photo_Location || Update_TagsDTO.Image != null)
+            if (getTag.Tag_Photo_Location != Update_TagsDTO.Tag_Photo_Location || Update_TagsDTO.Image != null)
             {
 
                 string dbPath = await SaveFile(Update_TagsDTO.Image, "Images");
@@ -270,7 +252,7 @@ namespace VideoGuide.Controllers
                     Tag_Photo_Location = dbPath,
                     visable = Update_TagsDTO.visable
                 };
-                System.IO.File.Delete(Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath));
+                System.IO.File.Delete(Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, getTag.Tag_Photo_Location));
 
             }
             else
@@ -280,10 +262,12 @@ namespace VideoGuide.Controllers
                     TagID = Update_TagsDTO.TagID,
                     Lantin_TagName = Update_TagsDTO.Lantin_TagName,
                     Local_TagName = Update_TagsDTO.Local_TagName,
-                    Tag_Photo_Location = filepath,
+                    Tag_Photo_Location = getTag.Tag_Photo_Location,
                     visable = Update_TagsDTO.visable
                 };
             }
+            Change_Display_Order change_Display_Order = new Change_Display_Order(_context);
+            change_Display_Order.Tag(getTag, Update_TagsDTO.DisplayOrder);
             await _context.Tags.SingleUpdateAsync(Tag);
             await _context.SaveChangesAsync();
             List<listTagID> listTagID = new List<listTagID>();
@@ -312,7 +296,7 @@ namespace VideoGuide.Controllers
             if (GroupID.HasValue)
             {
                 baseQuery = baseQuery.Where(group => group.GroupTags.Any(groupid => groupid.GroupID == GroupID))
-                    .OrderBy(group=> group.GroupTags.FirstOrDefault(displayOder => displayOder.GroupID == GroupID)!.DisplayOrder);
+                    .OrderBy(group=> group.DisplayOrder);
             }
             // Apply the filter only if filterId has a value
             if (TagID.HasValue)
@@ -479,7 +463,7 @@ namespace VideoGuide.Controllers
                     .Include(TagVideo => TagVideo.VideoTags)
                     .Where(TagVideo => TagVideo.VideoTags
                         .Select(Tag => Tag.TagID).Contains(TagID))
-                    .OrderBy(tagVideo => tagVideo.VideoTags.FirstOrDefault(tag => tag.TagID == TagID)!.DisplayOrder);
+                    .OrderBy(tagVideo => tagVideo.DisplayOrder);
             }
             if (Id != null && TagID == null && search == null)
             {
@@ -578,11 +562,11 @@ namespace VideoGuide.Controllers
         //[Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update_Video([FromForm] UpdateVideoDTO UpdateVideoDTO)
         {
-            string filepath = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_Location ?? string.Empty;
+            var getVideo = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result;
             string Video_Frame_Path = _context.Videos.FirstOrDefaultAsync(w => w.VideoID == UpdateVideoDTO.VideoID).Result?.Video_Fram_Location ?? string.Empty;
 
             Video Video = new Video();
-            if (filepath != UpdateVideoDTO.Video_Location || UpdateVideoDTO.Video != null)
+            if (getVideo.Video_Location != UpdateVideoDTO.Video_Location || UpdateVideoDTO.Video != null)
             {
 
                 string dbPath = await SaveFile(UpdateVideoDTO.Video, "Videos");
@@ -598,7 +582,7 @@ namespace VideoGuide.Controllers
                     visable = UpdateVideoDTO.visable,
                     Video_CountOfViews = 0
                 };
-                string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, filepath);
+                string Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, getVideo.Video_Location);
                 System.IO.File.Delete(Fullpath);
                 Fullpath = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, dbPath);
                 string FullpathFrame = Path.Combine(Directory.GetCurrentDirectory(), _env.WebRootPath, Video_Frame_Path);
@@ -629,12 +613,14 @@ namespace VideoGuide.Controllers
                     Video_Local_Tiltle = UpdateVideoDTO.Video_Local_Tiltle,
                     Video_Lantin_Description = UpdateVideoDTO.Video_Lantin_Description,
                     Video_Local_Description = UpdateVideoDTO.Video_Local_Description,
-                    Video_Location = filepath,
+                    Video_Location = getVideo.Video_Location,
                     Video_Fram_Location = Video_Frame_Path,
                     visable = UpdateVideoDTO.visable,
                     Video_CountOfViews = Video_CountOfViews
                 };
             }
+            Change_Display_Order change_Display_Order = new Change_Display_Order(_context);
+            change_Display_Order.Video(getVideo, UpdateVideoDTO.DisplayOrder);
             await _context.Videos.SingleUpdateAsync(Video);
             await _context.SaveChangesAsync();
             VideoTagDTO VideoTagDTO = new VideoTagDTO();

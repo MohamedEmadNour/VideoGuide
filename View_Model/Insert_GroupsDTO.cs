@@ -24,5 +24,8 @@ namespace VideoGuide.View_Model
         public bool visable { get; set; } = true;
         public string Group_Photo_Location { get; set; } = string.Empty;
         public IFormFile? Image { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "The value must be greater than 0.")]
+        public int DisplayOrder { get; set; }
+
     }
 }

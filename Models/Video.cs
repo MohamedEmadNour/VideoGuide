@@ -23,6 +23,8 @@ public partial class Video
 
     public string? Video_Fram_Location { get; set; }
 
+    public int? DisplayOrder { get; set; }
+
     public virtual ICollection<VideoTag> VideoTags { get; set; } = new List<VideoTag>();
 
     public virtual ICollection<Video_Fav> Video_Favs { get; set; } = new List<Video_Fav>();

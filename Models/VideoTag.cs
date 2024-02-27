@@ -11,8 +11,6 @@ public partial class VideoTag
 
     public int? TagID { get; set; }
 
-    public int? DisplayOrder { get; set; }
-
     public virtual Tag? Tag { get; set; }
 
     public virtual Video? Video { get; set; }

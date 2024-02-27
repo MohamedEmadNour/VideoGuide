@@ -27,5 +27,8 @@ namespace VideoGuide.View_Model
             public string Lantin_TagName { get; set; } = string.Empty;
             [Required]
             public string Local_TagName { get; set; } = string.Empty;
+        [Range(1, int.MaxValue, ErrorMessage = "The value must be greater than 0.")]
+
+        public int DisplayOrder { get; set; }
     }
 }
